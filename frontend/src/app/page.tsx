@@ -78,6 +78,8 @@ const generate20PlusDeals = (query: string): DealItem[] => {
   const budgetMatch = query.match(/(?:under|below|for|budget|within)\s*(?:₹|rs\.?|inr)?\s*([\d,]+)/i);
   let parsedBudget = budgetMatch ? parseInt(budgetMatch[1].replace(/,/g, ""), 10) : 0;
 
+  const isFan = /fan|fans|ceiling|table fan|pedestal|exhaust fan|atomberg|crompton|havells|orient|usha|bldc/i.test(qLower);
+  const isSpeaker = /speaker|speakers|bluetooth speaker|soundbar|beats|jbl|sony speaker|marshall|boat stone|bose|sound/i.test(qLower);
   const isKitchen = /bowl|plate|dish|cup|mug|spoon|fork|knife|cookware|pan|pot|kadai|kitchen|utensil|borosil|milton|cello/i.test(qLower);
   const isSkincare = /face|wash|cleanser|skin|derma|serum/i.test(qLower);
   const isWatch = /watch|smartwatch|analog|chrono/i.test(qLower);
@@ -87,7 +89,9 @@ const generate20PlusDeals = (query: string): DealItem[] => {
   const isMonitor = /monitor|screen|display|4k|ips/i.test(qLower);
 
   if (!parsedBudget) {
-    if (isKitchen) parsedBudget = 899;
+    if (isFan) parsedBudget = 3499;
+    else if (isSpeaker) parsedBudget = 4999;
+    else if (isKitchen) parsedBudget = 899;
     else if (isSkincare) parsedBudget = 1199;
     else if (isWatch) parsedBudget = 4999;
     else if (isShoe) parsedBudget = 4999;
@@ -100,7 +104,55 @@ const generate20PlusDeals = (query: string): DealItem[] => {
 
   let rawList: Array<[string, string, number, number, number, string, string[]]> = [];
 
-  if (isKitchen) {
+  if (isFan) {
+    rawList = [
+      ["Atomberg Renesa 1200mm BLDC Motor Smart Ceiling Fan with Remote", "Amazon.in", 1.05, 4.6, 48000, "BESTSELLER", ["BLDC 28W 65% Energy Saving", "Smart Remote Control", "3-Year Warranty"]],
+      ["Crompton SilentPro Enso 1200mm ActivBLDC Smart Ceiling Fan", "Flipkart", 1.22, 4.6, 18200, "ACTIVBLDC", ["ActivBLDC Silent Operation", "315 CMM Air Delivery", "Anti-Dust Coating"]],
+      ["Havells Glaze 1200mm Decorative Ceiling Fan (Espresso Brown)", "Amazon.in", 0.82, 4.4, 24000, "POPULAR", ["100% Copper Motor", "Decorative Trim Blades", "390 RPM High Speed"]],
+      ["Usha Striker Galaxy 1200mm Ultra High Speed Ceiling Fan", "Tata CLiQ", 0.74, 4.4, 14500, "HIGH THRUST", ["385 RPM High Air Thrust", "Aerodynamic Blades", "High Gloss Finish"]],
+      ["Orient Electric Wendy 1200mm Metallic Finish Ceiling Fan", "Flipkart", 0.90, 4.5, 12800, "METALLIC FINISH", ["Metallic Accents", "Wide Tip Blades", "Pure Copper Winding"]],
+      ["Bajaj Maxima 600mm Ultra High Speed Ceiling Fan (White)", "Amazon.in", 0.45, 4.3, 31000, "SUPER SPEED", ["870 RPM Super Speed", "Compact 4-Blade Design", "100% Copper Motor"]],
+      ["Crompton Torpedo 400mm High Speed Table Fan (White & Blue)", "Croma", 0.62, 4.5, 16400, "PORTABLE POWER", ["2100 RPM Ultra High Speed", "Wide Oscillation Angle", "Thermal Protection"]],
+      ["Atomberg Studio+ 1200mm BLDC Fan with LED Speed Display", "Amazon.in", 1.36, 4.7, 11400, "PREMIUM BLDC", ["LED Speed Indicator", "28W Consumption", "Boost & Timer Mode"]],
+      ["Havells Birdie 230mm Multi-Purpose Desk & Wall Mount Fan", "Flipkart", 0.48, 4.3, 9800, "VERSATILE", ["Multi-Direction Swivel", "Spiral Guard Air Jet", "Lightweight Aerodynamic"]],
+      ["Usha Mist Air Icy 400mm Ultra Powerful Pedestal Fan with Remote", "Reliance Digital", 0.94, 4.4, 15200, "PEDESTAL FAN", ["Resonating Oscillation", "Adjustable Telescopic Height", "Synchronous Motor"]],
+      ["Luminous Dhoom 1200mm High Speed Decorative Ceiling Fan", "Tata CLiQ", 0.54, 4.3, 22000, "VALUE DEAL", ["Aluminum Alloy Blades", "Optimal Low-Voltage Air Delivery", "2-Year Warranty"]],
+      ["Polycab Superb 1200mm Energy Saver Ceiling Fan (Rose Gold)", "Flipkart", 0.71, 4.4, 7600, "ROSE GOLD", ["Electrolytic Copper Motor", "Rust-Free Powder Coat", "Silent Aerodynamic"]],
+      ["Crompton Energion Groove 1200mm BLDC Point Anywhere Remote Fan", "Amazon.in", 0.99, 4.5, 14100, "5-STAR BLDC", ["28W 5-Star Energy Rated", "RF Point Anywhere Remote", "Sleep Timer"]],
+      ["Orient Electric Stand 37 400mm High Speed Pedestal Fan", "Croma", 0.82, 4.3, 8900, "WIDE SWEEP", ["90-Degree Oscillation", "Resin Balanced Blades", "Extra Sturdy Guard"]],
+      ["Bajaj Esteem 400mm Table Fan with Silent High-Speed Air Delivery", "Amazon.in", 0.57, 4.4, 19500, "QUIET BREEZE", ["Full Copper Motor", "Overheat Auto Cut-Off", "ABS Tough Blades"]],
+      ["Havells Stealth Air 1200mm Ultra-Quiet BLDC Ceiling Fan", "Tata CLiQ", 1.56, 4.7, 6200, "HYDRODYNAMIC", ["Hydrodynamic Profile", "280 CMM High Air Delivery", "Dust Resistant Nano Coat"]],
+      ["Atomberg Efficio+ 1200mm Energy Efficient Ceiling Fan", "Flipkart", 0.94, 4.6, 38000, "INVERTER READY", ["Runs 3X Longer on Inverter", "28W Super Saver", "Smart Remote Control"]],
+      ["Usha Maxx Air 400mm High Thrust Table Fan (White)", "Amazon.in", 0.52, 4.3, 14200, "COMPACT", ["Semi-Gloss Finish", "Dual Ball Bearing Motor", "3 Speed Piano Switch"]],
+      ["Orient Electric Apex-FX 1200mm High Speed Ceiling Fan (Brown)", "Flipkart", 0.48, 4.3, 52000, "NATIONAL HIT", ["Double Ball Bearings", "Ribbed Blades for Rigidity", "Low Power Draw"]],
+      ["Crompton HighFlo Wave Plus 400mm Wall Mount Fan with Pull Cord", "Croma", 0.71, 4.4, 11800, "WALL MOUNT", ["Pull Cord Speed Control", "Smooth Tilt Adjustment", "Overload Protection"]],
+      ["Havells Pacer 1200mm Ultra Fast 400 RPM Ceiling Fan", "Amazon.in", 0.62, 4.4, 34000, "FAST BREEZE", ["400 RPM Speed", "Superior Aluminum Alloy", "Long Life Paint"]]
+    ];
+  } else if (isSpeaker) {
+    rawList = [
+      ["JBL Flip 6 Wireless Portable Bluetooth Speaker with Deep Bass", "Amazon.in", 2.00, 4.7, 34000, "BESTSELLER", ["2-Way Speaker System", "IP67 Waterproof & Dustproof", "12H Playtime"]],
+      ["boAt Stone 650 10W Bluetooth Speaker with Heavy Bass", "Flipkart", 0.30, 4.5, 78000, "VALUE HIT", ["10W Signature Sound", "7H Playback", "IPX5 Water Resistant"]],
+      ["Beats Pill+ Portable Wireless Bluetooth Speaker with Rich Sound", "Tata CLiQ", 2.60, 4.6, 8900, "BEATS AUDIO", ["2-Way Crossover Stereo", "12H Battery", "Charge Out Capability"]],
+      ["Sony SRS-XB100 Wireless Ultra-Portable Bluetooth Speaker", "Croma", 0.80, 4.6, 14200, "EXTRA BASS", ["Sound Diffusion Processor", "Extra Bass", "16H Battery & IP67"]],
+      ["Marshall Emberton II Portable Bluetooth Speaker", "Amazon.in", 3.00, 4.8, 12400, "MARSHALL ICON", ["True Stereophonic 360° Sound", "30+ Hours Battery", "Rugged IP67"]],
+      ["Echo Dot 5th Gen Smart Speaker with Alexa & Deeper Bass", "Amazon.in", 0.90, 4.5, 62000, "SMART ALEXA", ["Hands-free Voice Hub", "Richer Motion Sensing Audio", "Smart Home Control"]],
+      ["boAt Stone 1200 14W RGB Bluetooth Speaker with 360 Stereo", "Flipkart", 0.60, 4.4, 41000, "RGB STEREO", ["14W RMS Sound", "Dynamic RGB Lights", "IPX7 Waterproof"]],
+      ["Tribit StormBox Micro 2 Portable Outdoor Speaker with Subwoofer", "Amazon.in", 0.86, 4.7, 16800, "XBASS PUNCH", ["XBASS Technology", "Built-in Power Bank 12H", "Bike Mount Strap"]],
+      ["Zebronics Zeb-Sound Feast 500 70W Bluetooth Party Speaker", "Flipkart", 0.76, 4.3, 19500, "PARTY BOOM", ["70W Boom Output", "Dual 89mm Drivers", "RGB Lights & Mic Input"]],
+      ["JBL Go 3 Eco Wireless Ultra-Portable Waterproof Bluetooth Speaker", "Reliance Digital", 0.60, 4.6, 45000, "PORTABLE PRO", ["JBL Pro Sound", "IP67 Protection", "Eco Recycled Fabric"]],
+      ["Sony HT-S20R 5.1ch Dolby Digital Soundbar with Subwoofer", "Croma", 3.00, 4.7, 26000, "CINEMA 5.1", ["400W Total Output", "5.1 Surround Sound", "Rear Speakers & Subwoofer"]],
+      ["Mi Portable Bluetooth Speaker (16W) with Dual EQ Mode", "Flipkart", 0.50, 4.4, 32000, "DUAL EQ", ["16W High Quality Sound", "IPX7 Waterproof", "13H Long Battery"]],
+      ["Bose SoundLink Micro Bluetooth Speaker with Tear-Resistant Strap", "Tata CLiQ", 2.18, 4.7, 9200, "BOSE AUDIO", ["Crisp Sound & Deep Bass", "IP67 Waterproof", "Silicone Rugged Body"]],
+      ["boAt Aavante Bar 1190 90W 2.2 Channel Soundbar with Subwoofers", "Amazon.in", 0.90, 4.3, 21000, "HOME THEATRE", ["90W Signature Audio", "Dual Subwoofers", "Multiple EQ Modes"]],
+      ["Portronics SoundDrum 1 10W TWS Portable Bluetooth Speaker", "Flipkart", 0.22, 4.3, 38000, "BUDGET BEAT", ["10W Bass Boost", "In-built FM Radio", "Type-C Fast Charge"]],
+      ["JBL Charge 5 Portable Waterproof Speaker with Powerbank", "Amazon.in", 2.80, 4.8, 19000, "POWERHOUSE", ["Dual Passive Radiators", "20H Playtime", "Built-in Powerbank"]],
+      ["Mivi Roam 2 Wireless Bluetooth Speaker with 24H Playtime", "Flipkart", 0.20, 4.3, 64000, "24H PLAY", ["24-Hour Battery", "Studio Sound", "Aircraft Aluminum Grill"]],
+      ["Marshall Stanmore III Bluetooth Home Speaker", "Tata CLiQ", 7.00, 4.8, 3400, "FLAGSHIP LUXURY", ["Expansive Soundstage", "RCA & 3.5mm Inputs", "Bluetooth 5.2"]],
+      ["Realme Pocket 3W Compact Bluetooth Speaker with 3 Bass Modes", "Flipkart", 0.18, 4.2, 28000, "POCKET SIZE", ["3W Dynamic Bass Boost", "6H Total Battery", "IPX5 Water Resistant"]],
+      ["Sony SRS-XE200 X-Series Wireless Speaker with Line Diffuser", "Reliance Digital", 1.80, 4.5, 5800, "LINE DIFFUSER", ["Line-Shape Diffuser", "Ambient Noise Sensing", "16H Battery"]],
+      ["boAt PartyPal 50 20W Wireless Party Speaker with Karaoke Mic", "Amazon.in", 0.50, 4.3, 14000, "KARAOKE PARTY", ["20W Stereo Sound", "Karaoke Mic Support", "Party LED Lights"]]
+    ];
+  } else if (isKitchen) {
     rawList = [
       ["Borosil Glass Mixing & Serving Bowl Set (Set of 3, 500ml, 1L, 1.5L)", "Amazon.in", 0.78, 4.6, 28400, "BESTSELLER", ["100% Borosilicate Glass", "Microwave & Oven Safe", "Flame Proof"]],
       ["Milton Pro Cook Stainless Steel Bowl Set with Lids (Pack of 3)", "Flipkart", 0.65, 4.5, 19200, "TOP VALUE", ["Food Grade Stainless Steel", "Airtight Plastic Lids", "Mirror Polish"]],
@@ -219,28 +271,32 @@ const generate20PlusDeals = (query: string): DealItem[] => {
     const origPrice = Math.round(safePrice * 1.38);
     const discount = Math.round((1 - safePrice / origPrice) * 100);
 
-    let storeUrl = `https://www.amazon.in/s?k=${encodeURIComponent(queryTerm)}`;
+    let storeUrl = `https://www.amazon.in/s?k=${encodeURIComponent(title)}`;
     if (storeName === "Flipkart") {
-      storeUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(queryTerm)}`;
+      storeUrl = `https://www.flipkart.com/search?q=${encodeURIComponent(title)}`;
     } else if (storeName === "Myntra") {
-      storeUrl = `https://www.myntra.com/${encodeURIComponent(queryTerm)}`;
+      storeUrl = `https://www.myntra.com/${encodeURIComponent(title)}`;
     } else if (storeName === "Tata CLiQ") {
-      storeUrl = `https://www.tatacliq.com/search/?searchCategory=all&text=${encodeURIComponent(queryTerm)}`;
+      storeUrl = `https://www.tatacliq.com/search/?searchCategory=all&text=${encodeURIComponent(title)}`;
     } else if (storeName === "Nykaa") {
-      storeUrl = `https://www.nykaa.com/search/result/?q=${encodeURIComponent(queryTerm)}`;
+      storeUrl = `https://www.nykaa.com/search/result/?q=${encodeURIComponent(title)}`;
     } else if (storeName === "Croma") {
-      storeUrl = `https://www.croma.com/searchB?q=${encodeURIComponent(queryTerm)}`;
+      storeUrl = `https://www.croma.com/searchB?q=${encodeURIComponent(title)}`;
     } else if (storeName === "Reliance Digital") {
-      storeUrl = `https://www.reliancedigital.in/search?q=${encodeURIComponent(queryTerm)}`;
+      storeUrl = `https://www.reliancedigital.in/search?q=${encodeURIComponent(title)}`;
     }
 
-    let img = "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&auto=format&fit=crop&q=60";
-    if (isKitchen) {
+    let img = "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&auto=format&fit=crop&q=60";
+    if (isFan) {
+      img = "https://images.unsplash.com/photo-1585338107529-13afc5f02586?w=500&auto=format&fit=crop&q=60";
+    } else if (isSpeaker) {
+      img = "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=500&auto=format&fit=crop&q=60";
+    } else if (isKitchen) {
       img = "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=500&auto=format&fit=crop&q=60";
     } else if (isSkincare) {
       img = "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500&auto=format&fit=crop&q=60";
     } else if (isWatch) {
-      img = "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=60";
+      img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60";
     } else if (isShoe) {
       img = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&auto=format&fit=crop&q=60";
     } else if (isGuitar) {

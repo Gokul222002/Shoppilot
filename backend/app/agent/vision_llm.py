@@ -76,6 +76,14 @@ def extract_max_budget(objective: str) -> float:
         return val
 
     # Category-aware realistic defaults when user does not specify a budget:
+    if any(w in obj_lower for w in ["fan", "ceiling fan", "table fan", "pedestal fan", "bldc"]):
+        return 3500.0
+    if any(w in obj_lower for w in ["speaker", "speakers", "bluetooth speaker", "soundbar", "beats", "jbl"]):
+        return 4500.0
+    if any(w in obj_lower for w in ["tv", "television", "smart tv", "oled", "4k tv"]):
+        return 32000.0
+    if any(w in obj_lower for w in ["camera", "dslr", "gopro", "canon", "nikon"]):
+        return 38000.0
     if any(w in obj_lower for w in ["bowl", "plate", "cup", "mug", "spoon", "fork", "knife", "bottle", "flask", "cookware", "pan", "pot", "kitchen", "utensil"]):
         return 1200.0
     if any(w in obj_lower for w in ["face wash", "cleanser", "soap", "shampoo", "skincare", "lotion", "serum", "cream"]):
