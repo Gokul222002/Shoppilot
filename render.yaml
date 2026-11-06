@@ -6,7 +6,7 @@ services:
     env: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
-    plan: starter # Starter (1GB RAM) recommended for Playwright Chromium
+    plan: free
     region: oregon
     envVars:
       - key: PORT
@@ -28,7 +28,7 @@ services:
     env: docker
     dockerfilePath: frontend/Dockerfile
     dockerContext: frontend
-    plan: starter
+    plan: free
     region: oregon
     envVars:
       - key: PORT
