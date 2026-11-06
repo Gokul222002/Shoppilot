@@ -77,7 +77,7 @@ export const LiveBrowserFeed: React.FC<LiveBrowserFeedProps> = ({
         {screenshot ? (
           <div className="relative w-full h-full flex items-center justify-center p-2">
             <img
-              src={`data:image/jpeg;base64,${screenshot}`}
+              src={screenshot.startsWith("data:") || screenshot.startsWith("http") ? screenshot : `data:image/jpeg;base64,${screenshot}`}
               alt="Live Headless Browser Stream"
               className="w-full h-full object-contain rounded-lg shadow-xl border border-alpine-800"
             />
