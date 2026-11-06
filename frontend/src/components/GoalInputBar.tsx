@@ -11,9 +11,11 @@ interface GoalInputBarProps {
 }
 
 const PRESETS = [
+  "Find a smartwatch under ₹5,000 and add to cart",
   "Find a 4K 27-inch monitor under ₹25,000 and add it to cart",
-  "Find running shoes under ₹7,000 with discount and add to cart",
-  "Find ANC wireless headphones under ₹8,000 and add to cart",
+  "Find running shoes under ₹5,000 with discount and add to cart",
+  "Find ANC wireless earbuds under ₹3,000",
+  "Find a 5G phone under ₹25,000",
 ];
 
 export const GoalInputBar: React.FC<GoalInputBarProps> = ({

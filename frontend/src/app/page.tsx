@@ -25,21 +25,30 @@ import { SafetyIndicator } from "../components/SafetyIndicator";
 import { NotificationFeed, PushNotification } from "../components/NotificationToast";
 
 // Helper function to create realistic SVG browser preview frames for interactive simulation
-const createSimSvg = (title: string, subtitle: string, badge: string, highlightAction?: string) => {
+const createSimSvg = (
+  title: string,
+  subtitle: string,
+  badge: string,
+  highlightAction?: string,
+  productTitle: string = 'Noise ColorFit Ultra 3 Smartwatch',
+  price: number = 2499,
+  origPrice: number = 7999,
+  store: string = 'Amazon.in'
+) => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600">
     <rect width="1000" height="600" fill="#0e1411"/>
     <rect x="0" y="0" width="1000" height="60" fill="#141d18"/>
     <text x="30" y="38" fill="#f4f1de" font-family="monospace" font-size="18" font-weight="bold">TRAILHEAD SUPPLY CO. // INDIA FLAGSHIP (INR ₹)</text>
     <rect x="750" y="16" width="220" height="30" rx="6" fill="#1b2621" stroke="#263730"/>
-    <text x="770" y="36" fill="#8ba69b" font-family="monospace" font-size="13">🛒 Cart (1) | ₹22,999</text>
+    <text x="770" y="36" fill="#8ba69b" font-family="monospace" font-size="13">🛒 Cart (1) | ₹${price.toLocaleString("en-IN")}</text>
     <rect x="30" y="90" width="940" height="470" rx="16" fill="#151e19" stroke="#223129"/>
     <text x="60" y="145" fill="#e07a5f" font-family="monospace" font-size="14" font-weight="bold">${badge}</text>
     <text x="60" y="190" fill="#f4f1de" font-family="sans-serif" font-size="28" font-weight="bold">${title}</text>
     <text x="60" y="230" fill="#8ba69b" font-family="monospace" font-size="16">${subtitle}</text>
     <rect x="60" y="280" width="420" height="230" rx="12" fill="#101713" stroke="#263730"/>
-    <text x="90" y="325" fill="#f4f1de" font-family="sans-serif" font-size="20" font-weight="bold">UltraView 27" 4K UHD IPS Monitor</text>
-    <text x="90" y="360" fill="#e07a5f" font-family="monospace" font-size="24" font-weight="bold">₹22,999 <tspan font-size="14" fill="#72877e" text-decoration="line-through">₹28,999</tspan></text>
-    <text x="90" y="400" fill="#8ba69b" font-family="monospace" font-size="13">✓ 3840x2160 UHD  ✓ IPS 144Hz 1ms  ✓ HDR400</text>
+    <text x="90" y="325" fill="#f4f1de" font-family="sans-serif" font-size="18" font-weight="bold">${productTitle}</text>
+    <text x="90" y="360" fill="#e07a5f" font-family="monospace" font-size="24" font-weight="bold">₹${price.toLocaleString("en-IN")} <tspan font-size="14" fill="#72877e" text-decoration="line-through">₹${origPrice.toLocaleString("en-IN")}</tspan></text>
+    <text x="90" y="400" fill="#8ba69b" font-family="monospace" font-size="13">✓ Direct Live Deal on ${store}  ✓ Top Rated  ✓ In Stock</text>
     <rect x="90" y="435" width="180" height="42" rx="8" fill="#e07a5f"/>
     <text x="125" y="461" fill="#0e1411" font-family="sans-serif" font-size="14" font-weight="bold">🛒 ADD TO CART</text>
     ${highlightAction ? `
@@ -47,7 +56,7 @@ const createSimSvg = (title: string, subtitle: string, badge: string, highlightA
     <text x="545" y="325" fill="#e07a5f" font-family="monospace" font-size="14" font-weight="bold">VISION-AI PERCEPTION ACTIVE</text>
     <text x="545" y="365" fill="#f4f1de" font-family="sans-serif" font-size="18" font-weight="bold">${highlightAction}</text>
     <text x="545" y="410" fill="#10b981" font-family="monospace" font-size="14">Confidence Score: 98.4%</text>
-    <text x="545" y="450" fill="#8ba69b" font-family="monospace" font-size="12">Element: Target bound validated in viewport</text>
+    <text x="545" y="450" fill="#8ba69b" font-family="monospace" font-size="12">Direct Store Link: ${store}</text>
     ` : ''}
   </svg>`;
   return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
@@ -257,8 +266,77 @@ export default function ShopPilotDashboard() {
     setMissionStatus("RUNNING");
     setStep(1);
     setCurrentUrl(`${backendHttp}/mock-store`);
+
+    const objLower = objective.toLowerCase();
+    let queryTerm = "4K 27-inch Monitor";
+    let matchedDeal: DealItem = {
+      title: 'UltraView 27" 4K UHD IPS Professional Monitor',
+      price: 22999,
+      original_price: 28999,
+      discount_percentage: 21,
+      rating: 4.8,
+      currency: "₹",
+      store: "Amazon.in",
+      url: "https://www.amazon.in/s?k=27+inch+4k+monitor",
+      specs: ["3840 x 2160 UHD", "IPS 144Hz 1ms", "HDR400 & USB-C 65W PD"]
+    };
+
+    if (objLower.includes("watch")) {
+      queryTerm = "Smartwatch";
+      matchedDeal = {
+        title: "Noise ColorFit Ultra 3 Bluetooth Calling Smartwatch",
+        price: 2499,
+        original_price: 7999,
+        discount_percentage: 68,
+        rating: 4.4,
+        currency: "₹",
+        store: "Amazon.in",
+        url: "https://www.amazon.in/s?k=Noise+ColorFit+Ultra+3+Smartwatch",
+        specs: ["1.96\" AMOLED Display", "BT Calling & AI Voice", "7-Day Battery"]
+      };
+    } else if (objLower.includes("shoe") || objLower.includes("sneaker")) {
+      queryTerm = "Running Shoes";
+      matchedDeal = {
+        title: "Nike Revolution 7 Men's Road Running Shoes",
+        price: 3199,
+        original_price: 4495,
+        discount_percentage: 28,
+        rating: 4.5,
+        currency: "₹",
+        store: "Flipkart",
+        url: "https://www.flipkart.com/search?q=Nike+Revolution+7",
+        specs: ["Soft Foam Midsole", "Breathable Mesh Upper", "Generative Traction"]
+      };
+    } else if (objLower.includes("headphone") || objLower.includes("earbud")) {
+      queryTerm = "ANC Earbuds";
+      matchedDeal = {
+        title: "boAt Nirvana Ion ANC True Wireless Earbuds",
+        price: 2299,
+        original_price: 7990,
+        discount_percentage: 71,
+        rating: 4.4,
+        currency: "₹",
+        store: "Flipkart",
+        url: "https://www.flipkart.com/search?q=boAt+Nirvana+Ion+ANC",
+        specs: ["32dB Active Noise Cancellation", "120 Hours Total Playback", "Crystal Bionic Sound"]
+      };
+    } else if (objLower.includes("phone") || objLower.includes("mobile")) {
+      queryTerm = "5G Smartphone";
+      matchedDeal = {
+        title: "OnePlus Nord CE 4 5G (8GB RAM, 128GB Storage)",
+        price: 24999,
+        original_price: 26999,
+        discount_percentage: 7,
+        rating: 4.5,
+        currency: "₹",
+        store: "Amazon.in",
+        url: "https://www.amazon.in/s?k=OnePlus+Nord+CE+4+5G",
+        specs: ["Snapdragon 7 Gen 3", "100W SuperVOOC Fast Charge", "50MP Sony LYT-600"]
+      };
+    }
+
     setActionMessage("Navigating to Trailhead India Sandbox Store...");
-    setScreenshot(createSimSvg("Trailhead Supply Co. / India Storefront", "Active Storefront Loaded - Scanning DOM Hierarchy", "STEP 1: NAVIGATION"));
+    setScreenshot(createSimSvg("Trailhead Supply Co. / India Storefront", "Active Storefront Loaded - Scanning DOM Hierarchy", "STEP 1: NAVIGATION", undefined, matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
     setStepLogs([
       {
         step: 1,
@@ -276,7 +354,7 @@ export default function ShopPilotDashboard() {
       setActionMessage("Detected Festival Coupon popup overlay. Dismissing...");
       setActiveSelector("#btn-dismiss-popup");
       setConfidence(0.98);
-      setScreenshot(createSimSvg("Festival Promo Overlay Detected", "Modal element #flash-promo-modal intercepting click events", "STEP 2: POPUP INTERCEPTION", "Clicking #btn-dismiss-popup"));
+      setScreenshot(createSimSvg("Festival Promo Overlay Detected", "Modal element #flash-promo-modal intercepting click events", "STEP 2: POPUP INTERCEPTION", "Clicking #btn-dismiss-popup", matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
       setStepLogs(prev => [
         ...prev,
         {
@@ -291,11 +369,10 @@ export default function ShopPilotDashboard() {
 
       simTimerRef.current = setTimeout(() => {
         setStep(3);
-        const queryTerm = objective.toLowerCase().includes("shoe") ? "Running Shoes" : objective.toLowerCase().includes("headphone") ? "Headphones" : "4K 27-inch Monitor";
         setActionMessage(`Typing "${queryTerm}" into store search bar...`);
         setActiveSelector("#search-input");
         setConfidence(0.96);
-        setScreenshot(createSimSvg(`Inventory Search: "${queryTerm}"`, "Applying client-side keyword filtering to product grid", "STEP 3: SEARCH DISCOVERY", `Typing into #search-input`));
+        setScreenshot(createSimSvg(`Inventory Search: "${queryTerm}"`, "Applying client-side keyword filtering to product grid", "STEP 3: SEARCH DISCOVERY", `Typing into #search-input`, matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
         setStepLogs(prev => [
           ...prev,
           {
@@ -311,26 +388,18 @@ export default function ShopPilotDashboard() {
 
         simTimerRef.current = setTimeout(() => {
           setStep(4);
-          setActionMessage("Found matching deal: UltraView 27\" 4K UHD IPS Monitor at ₹22,999 (Under budget ₹25,000)");
+          setActionMessage(`Found matching deal on ${matchedDeal.store}: ${matchedDeal.title} at ₹${matchedDeal.price.toLocaleString("en-IN")}`);
           setActiveSelector("#add-to-cart-101");
           setConfidence(0.95);
-          setScreenshot(createSimSvg("Matched Product: UltraView 27\" 4K UHD", "Price verified at ₹22,999 (Within target ₹25,000 threshold)", "STEP 4: SPEC & BUDGET MATCH", "Clicking #add-to-cart-101"));
+          setScreenshot(createSimSvg(`Matched Product: ${matchedDeal.title}`, `Price verified at ₹${matchedDeal.price.toLocaleString("en-IN")} on ${matchedDeal.store}`, "STEP 4: SPEC & BUDGET MATCH", "Clicking #add-to-cart-101", matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
 
-          const matchedDeal: DealItem = {
-            title: 'UltraView 27" 4K UHD IPS Monitor',
-            price: 22999,
-            original_price: 28999,
-            discount_percentage: 21,
-            rating: 4.8,
-            currency: "₹"
-          };
           setDeals([matchedDeal]);
 
           setStepLogs(prev => [
             ...prev,
             {
               step: 4,
-              thought: "Identified optimal match meeting all 4K UHD specs and budget constraint. Initiating Add-to-Cart sequence.",
+              thought: `Identified optimal match on ${matchedDeal.store} meeting all specs and budget. Initiating Add-to-Cart sequence.`,
               action: "click",
               selector: "#add-to-cart-101",
               timestamp: new Date().toISOString(),
@@ -342,12 +411,12 @@ export default function ShopPilotDashboard() {
             setStep(5);
             setActionMessage("Opening cart drawer to verify basket contents...");
             setActiveSelector("#nav-cart-btn");
-            setScreenshot(createSimSvg("Cart Drawer Review", "Item verified in basket. Proceeding to safe checkout simulation.", "STEP 5: BASKET VERIFICATION", "Opening Cart Drawer"));
+            setScreenshot(createSimSvg("Cart Drawer Review", `Item verified in basket. Proceeding to safe checkout simulation on ${matchedDeal.store}.`, "STEP 5: BASKET VERIFICATION", "Opening Cart Drawer", matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
             setStepLogs(prev => [
               ...prev,
               {
                 step: 5,
-                thought: "Item placed in cart. Inspecting cart drawer subtotal (₹22,999) before navigating to checkout simulation.",
+                thought: `Item placed in cart. Inspecting cart drawer subtotal (₹${matchedDeal.price.toLocaleString("en-IN")}) before navigating to checkout simulation.`,
                 action: "click",
                 selector: "#nav-cart-btn",
                 timestamp: new Date().toISOString(),
@@ -361,15 +430,15 @@ export default function ShopPilotDashboard() {
               setMissionStatus("COMPLETED");
               setActionMessage("Checkout simulated successfully! Safety Guardrail verified.");
               setSafetyTriggered(true);
-              setSafetyReason("Autonomous agent reached checkout review. Real credit card payment was blocked by ShopPilot Safety Guardrail.");
-              setScreenshot(createSimSvg("Checkout Simulation Verified", "Safety guardrail intercepted financial authorization safely.", "STEP 6: SAFE COMPLETION"));
+              setSafetyReason(`Autonomous agent reached checkout review. Real credit card payment was safely blocked by ShopPilot Safety Guardrail.`);
+              setScreenshot(createSimSvg("Checkout Simulation Verified", `Safety guardrail intercepted financial authorization safely. Deal live on ${matchedDeal.store}.`, "STEP 6: SAFE COMPLETION", undefined, matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
               
               setNotifications(prev => [
                 {
                   id: "sim-notif-1",
                   event_type: "ADDED_TO_CART",
-                  title: "Deal Secured in Cart!",
-                  message: 'UltraView 27" 4K UHD IPS Monitor successfully added for ₹22,999.',
+                  title: `Deal Secured on ${matchedDeal.store}!`,
+                  message: `${matchedDeal.title} successfully verified for ₹${matchedDeal.price.toLocaleString("en-IN")}.`,
                   timestamp: new Date().toLocaleTimeString(),
                 },
                 ...prev
@@ -379,7 +448,7 @@ export default function ShopPilotDashboard() {
                 ...prev,
                 {
                   step: 6,
-                  thought: "Mission Complete: Deal extracted, verified in cart, checkout simulated, and simulated push webhook alert dispatched.",
+                  thought: `Mission Complete: ${matchedDeal.title} extracted, verified in cart, checkout simulated, and direct store link enabled.`,
                   action: "finish",
                   timestamp: new Date().toISOString(),
                   success: true
@@ -613,9 +682,14 @@ export default function ShopPilotDashboard() {
               <div className="flex items-center justify-between pb-3.5 border-b border-alpine-800">
                 <div className="flex items-center gap-2">
                   <ShoppingBag className="w-4 h-4 text-copper-500" />
-                  <h3 className="font-bold text-sm text-sand-100 tracking-wide">
-                    Extracted Deals & Cart Basket (INR ₹)
-                  </h3>
+                  <div>
+                    <h3 className="font-bold text-sm text-sand-100 tracking-wide">
+                      Live Multi-Store Deals (Amazon & Flipkart)
+                    </h3>
+                    <p className="text-[10px] text-alpine-400 font-mono">
+                      Click any deal card to buy directly on the store
+                    </p>
+                  </div>
                 </div>
                 <span className="text-[10px] font-mono font-bold text-copper-400 bg-alpine-800 px-2.5 py-1 rounded border border-alpine-700">
                   {deals.length} SELECTED

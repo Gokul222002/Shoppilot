@@ -1,12 +1,13 @@
 """
 Mock E-Commerce Store Router and Interactive Shop Simulation.
 Styled with the Trailhead Supply Co Alpine & Terracotta aesthetic (INR / ₹ Pricing).
+Provides real-time deal links to Amazon.in and Flipkart.
 """
 
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from typing import Optional, List, Dict
-from app.mock_store.products import MOCK_PRODUCTS
+from app.mock_store.products import MOCK_PRODUCTS, search_products
 
 router = APIRouter(prefix="/mock-store", tags=["Mock Store"])
 
@@ -15,52 +16,66 @@ session_cart: List[Dict] = []
 @router.get("", response_class=HTMLResponse)
 async def mock_store_home(q: Optional[str] = Query(None)):
     """Render full HTML mock e-commerce store styled with Trailhead aesthetic and INR currency"""
-    filtered_products = MOCK_PRODUCTS
-    if q:
-        q_clean = q.lower()
-        filtered_products = [
-            p for p in MOCK_PRODUCTS
-            if q_clean in p["title"].lower() or q_clean in p["category"].lower() or any(q_clean in s.lower() for s in p["specs"])
-        ]
+    filtered_products = search_products(q) if q else MOCK_PRODUCTS
 
     products_html = ""
     for p in filtered_products:
         clean_title = p["title"].replace('"', '&quot;').replace("'", "")
         safe_js_title = p["title"].replace("'", "").replace('"', '')
-        specs_badges = "".join([f'<span class="bg-[#1e2a24] text-[#b2c5bd] text-xs px-2 py-0.5 rounded font-mono border border-[#273830]">{s}</span>' for s in p["specs"][:3]])
+        store_name = p.get("store", "Amazon.in")
+        store_url = p.get("url", f"https://www.amazon.in/s?k={p['title']}")
+        specs_badges = "".join([f'<span class="bg-[#1e2a24] text-[#b2c5bd] text-xs px-2 py-0.5 rounded font-mono border border-[#273830]">{s}</span>' for s in p.get("specs", [])[:3]])
+        
         products_html += f"""
         <div class="product-card bg-[#151e19] rounded-2xl shadow-xl border border-[#223129] overflow-hidden hover:border-[#e07a5f]/60 transition duration-300 flex flex-col justify-between"
-             data-id="{p['id']}" data-price="{p['price']}" data-title="{clean_title}">
+             data-id="{p['id']}" data-price="{p['price']}" data-title="{clean_title}" data-category="{p.get('category', '')}" data-store="{store_name}" data-url="{store_url}">
             <div class="relative">
                 <img src="{p['image']}" alt="{clean_title}" class="w-full h-52 object-cover">
                 <span class="absolute top-2.5 left-2.5 bg-[#1b2621]/90 backdrop-blur-md text-[#e07a5f] border border-[#e07a5f]/40 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow">
-                    {p['badge']}
+                    {p.get('badge', 'VERIFIED DEAL')}
                 </span>
                 <span class="absolute top-2.5 right-2.5 bg-[#e07a5f] text-[#0e1411] text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow">
-                    -{p['discount_pct']}% OFF
+                    -{p.get('discount_pct', 20)}% OFF
                 </span>
             </div>
             <div class="p-5 flex-1 flex flex-col justify-between">
                 <div>
-                    <span class="text-[10px] font-bold text-[#e07a5f] uppercase tracking-widest font-mono">{p['category']}</span>
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-bold text-[#e07a5f] uppercase tracking-widest font-mono">{p.get('category', 'Gear')}</span>
+                        <span class="text-[10px] font-bold text-[#8ba69b] font-mono bg-[#141d18] px-2 py-0.5 rounded border border-[#263730]">
+                            {store_name}
+                        </span>
+                    </div>
                     <h3 class="font-bold text-[#f4f1de] text-base mt-1 line-clamp-2 uppercase tracking-wide">{p['title']}</h3>
-                    <div class="flex items-center gap-1.5 mt-2 text-[#e07a5f] text-xs font-mono">
-                        <span>★ {p['rating']}</span>
-                        <span class="text-[#72877e] text-xs">({p['reviews']} customer reviews)</span>
+                    <div class="flex items-center justify-between mt-2 text-[#e07a5f] text-xs font-mono">
+                        <div class="flex items-center gap-1.5">
+                            <span>★ {p.get('rating', 4.5)}</span>
+                            <span class="text-[#72877e] text-xs">({p.get('reviews', 1200)} verified)</span>
+                        </div>
+                        <a href="{store_url}" target="_blank" rel="noreferrer" class="text-[#e07a5f] hover:underline flex items-center gap-1 font-semibold text-[11px]">
+                            Live Link ↗
+                        </a>
                     </div>
                     <div class="flex flex-wrap gap-1 mt-3">
                         {specs_badges}
                     </div>
                 </div>
-                <div class="mt-5 pt-3.5 border-t border-[#223129] flex items-center justify-between">
+                <div class="mt-5 pt-3.5 border-t border-[#223129] flex items-center justify-between gap-3">
                     <div>
                         <div class="text-2xl font-black text-[#f4f1de] font-mono">₹{p['price']:,.0f}</div>
-                        <div class="text-xs text-[#72877e] line-through font-mono">₹{p['original_price']:,.0f}</div>
+                        <div class="text-xs text-[#72877e] line-through font-mono">₹{p.get('original_price', p['price'] * 1.3):,.0f}</div>
                     </div>
-                    <button id="add-to-cart-{p['id']}" onclick="addToCart('{p['id']}', '{safe_js_title}', {p['price']})"
-                            class="btn-add-to-cart bg-[#e07a5f] hover:bg-[#d1654a] text-[#0e1411] text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg shadow-md transition active:scale-95 flex items-center gap-1.5">
-                        <span>🛒 Add to Cart</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <a href="{store_url}" target="_blank" rel="noreferrer"
+                           class="bg-[#1b2621] hover:bg-[#223129] text-[#f4f1de] text-xs font-bold uppercase tracking-wider px-3 py-2.5 rounded-lg border border-[#263730] transition flex items-center gap-1"
+                           title="Visit real product page on {store_name}">
+                            <span>↗</span>
+                        </a>
+                        <button id="add-to-cart-{p['id']}" onclick="addToCart('{p['id']}', '{safe_js_title}', {p['price']}, '{store_name}', '{store_url}')"
+                                class="btn-add-to-cart bg-[#e07a5f] hover:bg-[#d1654a] text-[#0e1411] text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg shadow-md transition active:scale-95 flex items-center gap-1.5">
+                            <span>🛒 Add to Cart</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -71,7 +86,7 @@ async def mock_store_home(q: Optional[str] = Query(None)):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRAILHEAD INDIA | Flagship Demo Store</title>
+    <title>TRAILHEAD INDIA | Live Multi-Store Deal Hunter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -85,10 +100,10 @@ async def mock_store_home(q: Optional[str] = Query(None)):
     <!-- Top Announcement Bar -->
     <header class="bg-[#141d18] text-[#8ba69b] text-[11px] py-2 px-4 flex justify-between items-center border-b border-[#212f29] badge-mono">
         <div class="flex items-center gap-2">
-            <span class="bg-[#e07a5f] text-[#0e1411] text-[9px] font-black px-1.5 py-0.5 rounded">INDIA EDITION</span>
-            <span>TRAILHEAD SUPPLY CO. // OFFICIAL MOCK STORE SANDBOX (INR ₹)</span>
+            <span class="bg-[#e07a5f] text-[#0e1411] text-[9px] font-black px-1.5 py-0.5 rounded">MULTI-STORE LIVE</span>
+            <span>TRAILHEAD SUPPLY CO. // REAL-TIME INDIAN DEAL HUNTER (AMAZON.IN · FLIPKART)</span>
         </div>
-        <div class="text-[#72877e] hidden sm:block">BENGALURU / NEW DELHI • FAST DISPATCH ACROSS INDIA</div>
+        <div class="text-[#72877e] hidden sm:block">BENGALURU / NEW DELHI • REAL-TIME DEALS IN INR (₹)</div>
     </header>
 
     <!-- Navigation Bar -->
@@ -103,7 +118,7 @@ async def mock_store_home(q: Optional[str] = Query(None)):
                     </div>
                     <div>
                         <span class="heading-font text-xl font-bold tracking-wider uppercase block leading-none">TRAILHEAD</span>
-                        <span class="badge-mono text-[9px] text-[#8ba69b] tracking-widest">INDIA / BENGALURU</span>
+                        <span class="badge-mono text-[9px] text-[#8ba69b] tracking-widest">DEAL HUNTER / INDIA</span>
                     </div>
                 </a>
             </div>
@@ -111,7 +126,7 @@ async def mock_store_home(q: Optional[str] = Query(None)):
             <!-- Search Bar Form -->
             <form onsubmit="event.preventDefault(); doFilterSearch();" class="flex-1 max-w-xl flex items-center relative">
                 <input id="search-input" name="q" type="search" value="{q or ''}"
-                       placeholder="Search products, 4K monitors, running shoes, tech gear..."
+                       placeholder="Search watches, 4K monitors, running shoes, phones, tech..."
                        class="w-full bg-[#0e1411] border border-[#263730] text-[#f4f1de] rounded-lg pl-4 pr-24 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-[#e07a5f] focus:border-[#e07a5f] transition placeholder-[#5e8072]" />
                 <button id="btn-search" type="button" onclick="doFilterSearch()"
                         class="absolute right-1 top-1 bottom-1 bg-[#e07a5f] hover:bg-[#d1654a] text-[#0e1411] text-xs font-bold uppercase tracking-wider px-4 rounded-md transition heading-font">
@@ -136,10 +151,10 @@ async def mock_store_home(q: Optional[str] = Query(None)):
             <div>
                 <div class="flex items-center gap-2 mb-1.5">
                     <div class="w-6 h-0.5 bg-[#e07a5f]"></div>
-                    <span class="badge-mono text-[10px] text-[#e07a5f] font-bold tracking-widest uppercase">CATALOG INVENTORY</span>
+                    <span class="badge-mono text-[10px] text-[#e07a5f] font-bold tracking-widest uppercase">LIVE MULTI-STORE INVENTORY</span>
                 </div>
-                <h1 class="text-3xl font-black text-[#f4f1de] uppercase tracking-tight heading-font">Field Gear & Smart Tech Deals (INR ₹)</h1>
-                <p class="text-xs text-[#8ba69b] mt-1 font-mono">Showing {len(filtered_products)} verified items available in active warehouse</p>
+                <h1 class="text-3xl font-black text-[#f4f1de] uppercase tracking-tight heading-font">Live Deal Hunter & Verified Storefront</h1>
+                <p class="text-xs text-[#8ba69b] mt-1 font-mono">Showing {len(filtered_products)} live offers across Amazon India & Flipkart</p>
             </div>
             {f'<a href="/mock-store" class="text-xs font-bold text-[#e07a5f] hover:underline badge-mono">CLEAR FILTER</a>' if q else ''}
         </div>
@@ -162,7 +177,7 @@ async def mock_store_home(q: Optional[str] = Query(None)):
             <div class="w-6 h-0.5 bg-[#e07a5f] mx-auto mb-2"></div>
             <h3 class="text-xl font-bold text-[#f4f1de] uppercase heading-font tracking-wide">Festival Coupon Detected!</h3>
             <p class="text-xs text-[#8ba69b] mt-2 leading-relaxed">
-                Use code <span class="font-mono font-bold text-[#e07a5f] bg-[#0e1411] px-1.5 py-0.5 rounded border border-[#223129]">NAMASTE15</span> to claim an extra ₹1,500 discount on any monitor or technical gear.
+                Use code <span class="font-mono font-bold text-[#e07a5f] bg-[#0e1411] px-1.5 py-0.5 rounded border border-[#223129]">NAMASTE15</span> to claim an extra ₹1,500 discount on any watch, monitor, or tech item.
             </p>
             <div class="mt-6 flex gap-2 justify-center">
                 <button onclick="dismissPopup()" class="bg-[#e07a5f] hover:bg-[#d1654a] text-[#0e1411] text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-lg shadow-lg heading-font">
@@ -214,18 +229,47 @@ async def mock_store_home(q: Optional[str] = Query(None)):
     <script>
         let cart = [];
 
+        const termAliases = {{
+            'watch': ['watch', 'smartwatch', 'analog', 'quartz', 'dial', 'chrono', 'titan', 'noise', 'boat', 'fire-boltt', 'casio', 'fastrack'],
+            'smartwatch': ['smartwatch', 'watch', 'calling', 'amoled', 'noise', 'fire-boltt', 'boat', 'fastrack'],
+            'shoe': ['shoe', 'shoes', 'sneaker', 'sneakers', 'running', 'marathon', 'nike', 'puma', 'hyperstride'],
+            'shoes': ['shoe', 'shoes', 'sneaker', 'sneakers', 'running', 'marathon', 'nike', 'puma', 'hyperstride'],
+            'monitor': ['monitor', 'display', 'screen', '4k', 'uhd', 'ips', 'ultraview', 'proscreen', 'acer', 'nitro'],
+            'display': ['display', 'monitor', 'screen'],
+            'headphone': ['headphone', 'headphones', 'earbuds', 'audio', 'soundpulse', 'sony', 'boat', 'oneplus'],
+            'headphones': ['headphone', 'headphones', 'earbuds', 'audio', 'soundpulse', 'sony', 'boat', 'oneplus'],
+            'laptop': ['laptop', 'vivobook', 'blade', 'asus', 'computer', 'notebook'],
+            'phone': ['phone', 'mobile', 'smartphone', '5g', 'oneplus', 'iphone'],
+            'mobile': ['mobile', 'phone', 'smartphone', '5g', 'oneplus', 'iphone']
+        }};
+
         function doFilterSearch() {{
             const rawQuery = (document.getElementById('search-input').value || '').toLowerCase().trim();
-            const terms = rawQuery ? rawQuery.split(/\\s+/) : [];
+            const words = rawQuery ? rawQuery.split(/\\s+/).filter(w => w.length > 1) : [];
             const cards = document.querySelectorAll('.product-card');
+
+            let expandedQuery = [...words];
+            words.forEach(w => {{
+                for (const [key, syns] of Object.entries(termAliases)) {{
+                    if (w === key || syns.includes(w)) {{
+                        expandedQuery.push(...syns);
+                    }}
+                }}
+            }});
+
             cards.forEach(card => {{
                 const title = (card.getAttribute('data-title') || '').toLowerCase();
-                const matches = terms.length === 0 || terms.every(term => title.includes(term) || (term === 'monitor' && title.includes('display')));
-                if (matches) {{
+                const category = (card.getAttribute('data-category') || '').toLowerCase();
+                const store = (card.getAttribute('data-store') || '').toLowerCase();
+                const fullText = title + ' ' + category + ' ' + store;
+
+                if (words.length === 0) {{
                     card.style.display = 'flex';
-                }} else {{
-                    card.style.display = 'none';
+                    return;
                 }}
+
+                const matches = expandedQuery.some(term => fullText.includes(term));
+                card.style.display = matches ? 'flex' : 'none';
             }});
         }}
 
@@ -239,8 +283,8 @@ async def mock_store_home(q: Optional[str] = Query(None)):
             modal.style.display = (modal.style.display === 'flex') ? 'none' : 'flex';
         }}
 
-        function addToCart(id, title, price) {{
-            cart.push({{ id, title, price }});
+        function addToCart(id, title, price, store, url) {{
+            cart.push({{ id, title, price, store: store || 'Amazon.in', url: url || '' }});
             document.getElementById('cart-count').innerText = cart.length;
             renderCart();
             window.dispatchEvent(new CustomEvent('cartUpdated', {{ detail: cart }}));
@@ -259,8 +303,14 @@ async def mock_store_home(q: Optional[str] = Query(None)):
                 total += item.price;
                 return `
                     <div class="flex items-center justify-between p-2.5 bg-[#0e1411] rounded-lg border border-[#212f29] text-xs">
-                        <span class="font-bold text-[#f4f1de] uppercase heading-font">${{item.title}}</span>
-                        <span class="font-mono font-bold text-[#e07a5f]">₹${{item.price.toLocaleString('en-IN')}}</span>
+                        <div>
+                            <span class="font-bold text-[#f4f1de] uppercase heading-font block">${{item.title}}</span>
+                            <span class="text-[10px] text-[#8ba69b] font-mono">${{item.store}}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-mono font-bold text-[#e07a5f] block">₹${{item.price.toLocaleString('en-IN')}}</span>
+                            ${{item.url ? `<a href="${{item.url}}" target="_blank" class="text-[10px] text-[#e07a5f] hover:underline">View Live ↗</a>` : ''}}
+                        </div>
                     </div>
                 `;
             }}).join('');
@@ -282,5 +332,6 @@ async def mock_store_home(q: Optional[str] = Query(None)):
     return HTMLResponse(content=html_content)
 
 @router.get("/api/products")
-async def get_products():
-    return JSONResponse(content={"products": MOCK_PRODUCTS})
+async def get_products(q: Optional[str] = Query(None)):
+    products = search_products(q) if q else MOCK_PRODUCTS
+    return JSONResponse(content={"products": products})
