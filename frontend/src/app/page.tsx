@@ -220,6 +220,7 @@ export default function ShopPilotDashboard() {
         break;
 
       case "DEAL_EXTRACTED":
+      case "DEAL_DISCOVERED":
         if (msg.data) {
           setDeals((prev) => {
             const exists = prev.some((d) => d.title === msg.data.title);
@@ -253,6 +254,13 @@ export default function ShopPilotDashboard() {
         setIsRunning(false);
         setMissionStatus("COMPLETED");
         setActionMessage("Shopping mission finished successfully!");
+        if (msg.data && msg.data.extracted_deals && msg.data.extracted_deals.length > 0) {
+          setDeals((prev) => {
+            const existingTitles = new Set(prev.map(d => d.title));
+            const newDeals = msg.data.extracted_deals.filter((d: any) => !existingTitles.has(d.title));
+            return [...prev, ...newDeals];
+          });
+        }
         break;
 
       default:
