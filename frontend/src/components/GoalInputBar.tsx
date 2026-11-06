@@ -12,6 +12,7 @@ interface GoalInputBarProps {
 
 const PRESETS = [
   "Find a smartwatch under ₹5,000 and add to cart",
+  "Find borosil glass bowl set under ₹1,000",
   "Find face wash under ₹2,000",
   "Find acoustic guitar under ₹5,000",
   "Find whey protein under ₹2,500",

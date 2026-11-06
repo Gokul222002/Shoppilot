@@ -76,9 +76,9 @@ const generate20PlusDeals = (query: string): DealItem[] => {
   const queryTerm = cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : "Smartwatch";
 
   const budgetMatch = query.match(/(?:under|below|for|budget|within)\s*(?:₹|rs\.?|inr)?\s*([\d,]+)/i);
-  const parsedBudget = budgetMatch ? parseInt(budgetMatch[1].replace(/,/g, ""), 10) : 5000;
-  const ref = Math.max(parsedBudget, 999);
+  let parsedBudget = budgetMatch ? parseInt(budgetMatch[1].replace(/,/g, ""), 10) : 0;
 
+  const isKitchen = /bowl|plate|dish|cup|mug|spoon|fork|knife|cookware|pan|pot|kadai|kitchen|utensil|borosil|milton|cello/i.test(qLower);
   const isSkincare = /face|wash|cleanser|skin|derma|serum/i.test(qLower);
   const isWatch = /watch|smartwatch|analog|chrono/i.test(qLower);
   const isShoe = /shoe|shoes|sneaker|running/i.test(qLower);
@@ -86,9 +86,45 @@ const generate20PlusDeals = (query: string): DealItem[] => {
   const isProtein = /protein|whey|isolate|supplement/i.test(qLower);
   const isMonitor = /monitor|screen|display|4k|ips/i.test(qLower);
 
+  if (!parsedBudget) {
+    if (isKitchen) parsedBudget = 899;
+    else if (isSkincare) parsedBudget = 1199;
+    else if (isWatch) parsedBudget = 4999;
+    else if (isShoe) parsedBudget = 4999;
+    else if (isGuitar) parsedBudget = 5999;
+    else if (isProtein) parsedBudget = 2499;
+    else if (isMonitor) parsedBudget = 24999;
+    else parsedBudget = 2999;
+  }
+  const ref = Math.max(parsedBudget, 499);
+
   let rawList: Array<[string, string, number, number, number, string, string[]]> = [];
 
-  if (isSkincare) {
+  if (isKitchen) {
+    rawList = [
+      ["Borosil Glass Mixing & Serving Bowl Set (Set of 3, 500ml, 1L, 1.5L)", "Amazon.in", 0.78, 4.6, 28400, "BESTSELLER", ["100% Borosilicate Glass", "Microwave & Oven Safe", "Flame Proof"]],
+      ["Milton Pro Cook Stainless Steel Bowl Set with Lids (Pack of 3)", "Flipkart", 0.65, 4.5, 19200, "TOP VALUE", ["Food Grade Stainless Steel", "Airtight Plastic Lids", "Mirror Polish"]],
+      ["Cello Opalware Dazzle Tropical Lagoon Soup Bowls (Set of 6)", "Myntra", 0.55, 4.4, 14500, "POPULAR", ["Thermal Resistance Opalware", "Bone Ash Free 100% Veg", "Chip Resistant"]],
+      ["Femora Borosilicate Glass Food Storage Bowl with Lid (800ml)", "Tata CLiQ", 0.50, 4.5, 8700, "AIRTIGHT", ["BPA Free Silicone Seal", "Freezer & Dishwasher Safe", "Leak Proof"]],
+      ["Treo by Milton Health First Ceramic Serving Bowl (1000ml)", "Amazon.in", 0.60, 4.5, 9600, "CERAMIC ART", ["Non-Porous Glazed Ceramic", "Microwave Safe", "Lead & Cadmium Free"]],
+      ["Clay Craft Fine Ceramic Soup & Salad Bowl Set (Set of 4)", "Flipkart", 0.70, 4.4, 11200, "HANDCRAFTED", ["Fine Ceramic Clayware", "Vibrant Scratch-Proof Gloss", "Easy Clean"]],
+      ["Amazon Brand - Solimo Stainless Steel Mixing Bowls (Set of 3)", "Amazon.in", 0.68, 4.4, 22100, "AMAZON BRAND", ["Deep Basin Spill Prevention", "Non-Slip Silicone Base", "Heavy Gauge Steel"]],
+      ["Borosil Klip N Store Microwavable Glass Bowl with Lid (400ml)", "Nykaa", 0.45, 4.6, 16800, "LEAK PROOF", ["Airtight Clip Locking", "Stackable Modular Design", "Oven Safe to 350°C"]],
+      ["Cello Tropical Dazzle Veg Serving Bowls (Set of 6, White)", "Flipkart", 0.48, 4.3, 13400, "DAILY ESSENTIAL", ["Smooth Pristine White Finish", "Lightweight & Break Resistant", "Dishwasher Safe"]],
+      ["Milton Stainless Steel Insulated Hot Bowl Casserole (1500ml)", "Tata CLiQ", 0.75, 4.6, 15600, "PUF INSULATED", ["Double Wall PUF Insulation", "Keeps Food Hot for 4-6 Hours", "Integrated Handles"]],
+      ["Tupperware Expression Salad and Pasta Bowl (1.3L)", "Amazon.in", 0.82, 4.5, 8900, "TUPPERWARE", ["Classic Airtight Seal", "Textured Scratch-Resistant Base", "BPA Free"]],
+      ["Femora Indian Ceramic Handcrafted Pasta Bowls (Set of 2)", "Myntra", 0.72, 4.6, 6400, "STUDIO POTTERY", ["Handmade Ceramic Pottery", "Wide Rim Italian Pasta Style", "Oven & Grill Safe"]],
+      ["Borosil Gourmet Deep Round Glass Baking Dish & Bowl (1.8L)", "Amazon.in", 0.85, 4.7, 18100, "CHEF GRADE", ["Deep Round Baking Dish", "Withstands 300°C Thermal Shock", "Scratch Proof"]],
+      ["Treo Clear Glass Dessert & Ice Cream Bowls (Set of 6)", "Flipkart", 0.42, 4.4, 12800, "DESSERT SET", ["Sparkling Crystalline Glass", "Wide Footed Base", "Dessert & Fruit Serve"]],
+      ["Pigeon Stainless Steel Handi Bowl Set with Copper Bottom (Set of 3)", "Amazon.in", 0.74, 4.3, 14200, "COPPER BOTTOM", ["Fast & Even Heat Distribution", "Traditional Handi Design", "Includes Steel Lids"]],
+      ["Vinod Stainless Steel Deep Mixing Bowl with Measurement Markings (2.5L)", "Tata CLiQ", 0.66, 4.5, 7800, "PRO KITCHEN", ["Internal Volume Markings", "Wide Flanged Grip Rim", "Food Safe SAS Tech"]],
+      ["Signoraware Compact Borosilicate Mixing Bowl with Airtight Lid (1000ml)", "Flipkart", 0.52, 4.4, 9100, "ALL ROUNDER", ["Borosilicate 400°C Resistant", "Quick Snap Lid", "Fridge to Microwave"]],
+      ["Prestige Stainless Steel Serving Bowl with Toughened Glass Lid (1500ml)", "Amazon.in", 0.78, 4.5, 10400, "PRESTIGE", ["Toughened Glass See-Through Lid", "Heavy Gauge 304 Steel", "Ergonomic Knob"]],
+      ["Larah by Borosil Silk Series Opalware Cereal Bowls (Set of 6)", "Myntra", 0.58, 4.5, 11900, "SILK SERIES", ["Extra Tough Toughened Opal", "Bone Ash Free 100% Veg", "Microwave Safe"]],
+      ["Wonderchef Granite Die-Cast Casserole Serving Bowl with Lid (20cm)", "Tata CLiQ", 0.92, 4.6, 5300, "GERMAN COATING", ["Virgin Aluminum Die-Cast", "PFOA Free MetaTuff 5-Layer", "Induction & Gas"]],
+      ["Corelle Livingware Winter Frost White Pasta & Salad Bowls (Set of 4)", "Amazon.in", 0.95, 4.8, 8200, "VITRELLE GLASS", ["Triple-Layer Vitrelle Glass", "Ultra-Lightweight & Space Saving", "Chip & Crack Resistant"]]
+    ];
+  } else if (isSkincare) {
     rawList = [
       ["CeraVe Foaming Cleanser for Normal to Oily Skin (236ml)", "Amazon.in", 0.72, 4.6, 14200, "DERMATOLOGIST PICK", ["Ceramides 1, 3, 6-II", "Niacinamide & Hyaluronic Acid", "Fragrance Free"]],
       ["Cetaphil Gentle Skin Cleanser for Sensitive Skin (250ml)", "Nykaa", 0.58, 4.5, 32800, "BESTSELLER", ["Hydrating Glycerin & B5", "Soap-Free Gentle", "All Skin Types"]],
@@ -198,8 +234,10 @@ const generate20PlusDeals = (query: string): DealItem[] => {
       storeUrl = `https://www.reliancedigital.in/search?q=${encodeURIComponent(queryTerm)}`;
     }
 
-    let img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60";
-    if (isSkincare) {
+    let img = "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&auto=format&fit=crop&q=60";
+    if (isKitchen) {
+      img = "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=500&auto=format&fit=crop&q=60";
+    } else if (isSkincare) {
       img = "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500&auto=format&fit=crop&q=60";
     } else if (isWatch) {
       img = "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=60";

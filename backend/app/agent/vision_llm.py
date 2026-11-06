@@ -61,6 +61,7 @@ def extract_max_budget(objective: str) -> float:
     """
     Extracts numerical price constraint in INR (₹) or USD ($):
     e.g. 'under 5000' -> 5000.0, 'under 25k' -> 25000.0, 'below 1 lakh' -> 100000.0
+    If no budget is specified, intelligently assigns a realistic market budget based on category.
     """
     obj_lower = objective.lower()
     price_match = re.search(r"(?:under|below|less than|within|around|budget of|[₹$]|rs\.?|inr)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|thousand|lakh)?", obj_lower)
@@ -73,7 +74,30 @@ def extract_max_budget(objective: str) -> float:
         elif multiplier == "lakh":
             val *= 100000
         return val
-    return 35000.0
+
+    # Category-aware realistic defaults when user does not specify a budget:
+    if any(w in obj_lower for w in ["bowl", "plate", "cup", "mug", "spoon", "fork", "knife", "bottle", "flask", "cookware", "pan", "pot", "kitchen", "utensil"]):
+        return 1200.0
+    if any(w in obj_lower for w in ["face wash", "cleanser", "soap", "shampoo", "skincare", "lotion", "serum", "cream"]):
+        return 1500.0
+    if any(w in obj_lower for w in ["watch", "smartwatch"]):
+        return 5000.0
+    if any(w in obj_lower for w in ["shoe", "shoes", "sneaker", "running"]):
+        return 5000.0
+    if any(w in obj_lower for w in ["guitar", "acoustic"]):
+        return 6000.0
+    if any(w in obj_lower for w in ["protein", "whey", "isolate"]):
+        return 2500.0
+    if any(w in obj_lower for w in ["headphone", "headphones", "earbuds", "earbud", "audio"]):
+        return 3500.0
+    if any(w in obj_lower for w in ["monitor", "display", "screen", "4k"]):
+        return 25000.0
+    if any(w in obj_lower for w in ["phone", "smartphone", "mobile", "5g"]):
+        return 25000.0
+    if any(w in obj_lower for w in ["laptop", "computer"]):
+        return 45000.0
+
+    return 2000.0
 
 class VisionLLMHandler:
     def __init__(self):

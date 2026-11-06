@@ -452,10 +452,13 @@ def generate_multi_store_catalog(query: str, max_budget: float = float("inf")) -
     words = [w for w in re.split(r"\s+", q_clean) if len(w) > 1]
     clean_name = query.title()
 
-    # Budget normalization
-    ref_budget = max_budget if max_budget < float("inf") else 4999.0
-
     # Categorization heuristics
+    is_kitchen = any(w in q_clean for w in [
+        "bowl", "bowls", "plate", "plates", "dish", "dishes", "cup", "cups", "mug", "mugs",
+        "spoon", "spoons", "fork", "forks", "knife", "knives", "cutlery", "cookware",
+        "pan", "pans", "pot", "pots", "kadai", "tiffin", "lunch box", "bottle", "bottles",
+        "flask", "glass", "dinner set", "kitchen", "utensil", "utensils", "borosil", "milton", "cello"
+    ])
     is_skincare = any(w in q_clean for w in ["skincare", "cleanser", "face", "wash", "cerave", "cetaphil", "himalaya", "minimalist", "derma", "serum", "cream", "lotion"])
     is_watch = any(w in q_clean for w in ["watch", "smartwatch", "analog", "dial", "chrono", "noise", "fire-boltt", "boat", "titan", "casio", "fastrack", "fossil"])
     is_shoe = any(w in q_clean for w in ["shoe", "shoes", "sneaker", "sneakers", "running", "nike", "puma", "adidas", "asics", "footwear", "sandal"])
@@ -465,6 +468,24 @@ def generate_multi_store_catalog(query: str, max_budget: float = float("inf")) -
     is_audio = any(w in q_clean for w in ["audio", "headphone", "headphones", "earbuds", "earbud", "tws", "anc", "soundbar", "speaker", "sony", "boat"])
     is_phone = any(w in q_clean for w in ["phone", "mobile", "smartphone", "5g", "oneplus", "iphone", "samsung", "redmi", "realme"])
     is_laptop = any(w in q_clean for w in ["laptop", "notebook", "computer", "macbook", "asus", "dell", "hp", "lenovo"])
+
+    # Realistic budget normalization per category
+    if is_kitchen and (max_budget == float("inf") or max_budget > 3000.0):
+        ref_budget = 899.0
+    elif is_skincare and (max_budget == float("inf") or max_budget > 3000.0):
+        ref_budget = 1199.0
+    elif is_watch and (max_budget == float("inf") or max_budget > 15000.0):
+        ref_budget = 4999.0
+    elif is_shoe and (max_budget == float("inf") or max_budget > 15000.0):
+        ref_budget = 4999.0
+    elif is_guitar and (max_budget == float("inf") or max_budget > 20000.0):
+        ref_budget = 5999.0
+    elif is_protein and (max_budget == float("inf") or max_budget > 8000.0):
+        ref_budget = 2499.0
+    elif max_budget < float("inf"):
+        ref_budget = max_budget
+    else:
+        ref_budget = 3999.0
 
     items: List[Dict[str, Any]] = []
 
@@ -476,7 +497,31 @@ def generate_multi_store_catalog(query: str, max_budget: float = float("inf")) -
                 items.append(dict(p))
 
     # Comprehensive brand matrix for generating 20+ authentic products
-    if is_skincare:
+    if is_kitchen:
+        templates = [
+            ("Borosil Glass Mixing & Serving Bowl Set (Set of 3, 500ml, 1L, 1.5L)", "Amazon.in", 0.78, 4.6, 28400, "BESTSELLER", ["100% Borosilicate Glass", "Microwave & Oven Safe", "Flame Proof"]),
+            ("Milton Pro Cook Stainless Steel Bowl Set with Lids (Pack of 3)", "Flipkart", 0.65, 4.5, 19200, "TOP VALUE", ["Food Grade Stainless Steel", "Airtight Plastic Lids", "Mirror Polish"]),
+            ("Cello Opalware Dazzle Tropical Lagoon Soup Bowls (Set of 6)", "Myntra", 0.55, 4.4, 14500, "POPULAR", ["Thermal Resistance Opalware", "Bone Ash Free 100% Veg", "Chip Resistant"]),
+            ("Femora Borosilicate Glass Food Storage Bowl with Lid (800ml)", "Tata CLiQ", 0.50, 4.5, 8700, "AIRTIGHT", ["BPA Free Silicone Seal", "Freezer & Dishwasher Safe", "Leak Proof"]),
+            ("Treo by Milton Health First Ceramic Serving Bowl (1000ml)", "Amazon.in", 0.60, 4.5, 9600, "CERAMIC ART", ["Non-Porous Glazed Ceramic", "Microwave Safe", "Lead & Cadmium Free"]),
+            ("Clay Craft Fine Ceramic Soup & Salad Bowl Set (Set of 4)", "Flipkart", 0.70, 4.4, 11200, "HANDCRAFTED", ["Fine Ceramic Clayware", "Vibrant Scratch-Proof Gloss", "Easy Clean"]),
+            ("Amazon Brand - Solimo Stainless Steel Mixing Bowls (Set of 3)", "Amazon.in", 0.68, 4.4, 22100, "AMAZON BRAND", ["Deep Basin Spill Prevention", "Non-Slip Silicone Base", "Heavy Gauge Steel"]),
+            ("Borosil Klip N Store Microwavable Glass Bowl with Lid (400ml)", "Nykaa", 0.45, 4.6, 16800, "LEAK PROOF", ["Airtight Clip Locking", "Stackable Modular Design", "Oven Safe to 350°C"]),
+            ("Cello Tropical Dazzle Veg Serving Bowls (Set of 6, White)", "Flipkart", 0.48, 4.3, 13400, "DAILY ESSENTIAL", ["Smooth Pristine White Finish", "Lightweight & Break Resistant", "Dishwasher Safe"]),
+            ("Milton Stainless Steel Insulated Hot Bowl Casserole (1500ml)", "Tata CLiQ", 0.75, 4.6, 15600, "PUF INSULATED", ["Double Wall PUF Insulation", "Keeps Food Hot for 4-6 Hours", "Integrated Handles"]),
+            ("Tupperware Expression Salad and Pasta Bowl (1.3L)", "Amazon.in", 0.82, 4.5, 8900, "TUPPERWARE", ["Classic Airtight Seal", "Textured Scratch-Resistant Base", "BPA Free"]),
+            ("Femora Indian Ceramic Handcrafted Pasta Bowls (Set of 2)", "Myntra", 0.72, 4.6, 6400, "STUDIO POTTERY", ["Handmade Ceramic Pottery", "Wide Rim Italian Pasta Style", "Oven & Grill Safe"]),
+            ("Borosil Gourmet Deep Round Glass Baking Dish & Bowl (1.8L)", "Amazon.in", 0.85, 4.7, 18100, "CHEF GRADE", ["Deep Round Baking Dish", "Withstands 300°C Thermal Shock", "Scratch Proof"]),
+            ("Treo Clear Glass Dessert & Ice Cream Bowls (Set of 6)", "Flipkart", 0.42, 4.4, 12800, "DESSERT SET", ["Sparkling Crystalline Glass", "Wide Footed Base", "Dessert & Fruit Serve"]),
+            ("Pigeon Stainless Steel Handi Bowl Set with Copper Bottom (Set of 3)", "Amazon.in", 0.74, 4.3, 14200, "COPPER BOTTOM", ["Fast & Even Heat Distribution", "Traditional Handi Design", "Includes Steel Lids"]),
+            ("Vinod Stainless Steel Deep Mixing Bowl with Measurement Markings (2.5L)", "Tata CLiQ", 0.66, 4.5, 7800, "PRO KITCHEN", ["Internal Volume Markings", "Wide Flanged Grip Rim", "Food Safe SAS Tech"]),
+            ("Signoraware Compact Borosilicate Mixing Bowl with Airtight Lid (1000ml)", "Flipkart", 0.52, 4.4, 9100, "ALL ROUNDER", ["Borosilicate 400°C Resistant", "Quick Snap Lid", "Fridge to Microwave"]),
+            ("Prestige Stainless Steel Serving Bowl with Toughened Glass Lid (1500ml)", "Amazon.in", 0.78, 4.5, 10400, "PRESTIGE", ["Toughened Glass See-Through Lid", "Heavy Gauge 304 Steel", "Ergonomic Knob"]),
+            ("Larah by Borosil Silk Series Opalware Cereal Bowls (Set of 6)", "Myntra", 0.58, 4.5, 11900, "SILK SERIES", ["Extra Tough Toughened Opal", "Bone Ash Free 100% Veg", "Microwave Safe"]),
+            ("Wonderchef Granite Die-Cast Casserole Serving Bowl with Lid (20cm)", "Tata CLiQ", 0.92, 4.6, 5300, "GERMAN COATING", ["Virgin Aluminum Die-Cast", "PFOA Free MetaTuff 5-Layer", "Induction & Gas"]),
+            ("Corelle Livingware Winter Frost White Pasta & Salad Bowls (Set of 4)", "Amazon.in", 0.95, 4.8, 8200, "VITRELLE GLASS", ["Triple-Layer Vitrelle Glass", "Ultra-Lightweight & Space Saving", "Chip & Crack Resistant"])
+        ]
+    elif is_skincare:
         templates = [
             ("CeraVe Foaming Cleanser for Normal to Oily Skin (236ml)", "Amazon.in", 0.75, 4.6, 14200, "DERMATOLOGIST PICK", ["Ceramides 1, 3, 6-II", "Niacinamide & Hyaluronic Acid", "Fragrance Free"]),
             ("Cetaphil Gentle Skin Cleanser for Sensitive Skin (250ml)", "Nykaa", 0.60, 4.5, 32800, "BESTSELLER", ["Hydrating Glycerin & B5", "Soap-Free Gentle", "All Skin Types"]),
@@ -644,7 +689,9 @@ def generate_multi_store_catalog(query: str, max_budget: float = float("inf")) -
         discount = int(round((1 - safe_price / orig_price) * 100))
 
         # Assign high quality relevant image based on category
-        if is_skincare:
+        if is_kitchen:
+            img = "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=500&auto=format&fit=crop&q=60"
+        elif is_skincare:
             img = "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500&auto=format&fit=crop&q=60"
         elif is_watch:
             img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"
@@ -663,7 +710,7 @@ def generate_multi_store_catalog(query: str, max_budget: float = float("inf")) -
         elif is_laptop:
             img = "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&auto=format&fit=crop&q=60"
         else:
-            img = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"
+            img = "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&auto=format&fit=crop&q=60"
 
         store_cfg = STORE_CONFIGS.get(store_name, STORE_CONFIGS["Amazon.in"])
         clean_search_query = f"{query} {title.split()[0]}"
