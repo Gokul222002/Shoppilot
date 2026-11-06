@@ -16,7 +16,7 @@ def test_mock_store_html_render():
     assert response.status_code == 200
     assert "TRAILHEAD" in response.text
     assert "UltraView 27" in response.text
-    assert "btn-dismiss-popup" in response.text
+    assert "btn-search" in response.text
 
 def test_mock_store_search_filter():
     response = client.get("/mock-store?q=monitor")

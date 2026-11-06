@@ -164,29 +164,6 @@ async def mock_store_home(q: Optional[str] = Query(None)):
         </div>
     </main>
 
-    <!-- Dynamic Promotional Flash Deal Popup Overlay -->
-    <div id="flash-promo-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-[#141d18] rounded-2xl max-w-md w-full p-7 shadow-2xl border border-[#2c3e37] text-center relative">
-            <button id="btn-dismiss-popup" onclick="dismissPopup()"
-                    class="btn-dismiss-popup absolute top-3.5 right-3.5 text-[#8ba69b] hover:text-[#f4f1de] bg-[#1c2822] rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                ✕
-            </button>
-            <div class="w-12 h-12 bg-[#223129] text-[#e07a5f] border border-[#e07a5f]/30 rounded-xl flex items-center justify-center mx-auto mb-3 text-2xl">
-                🎁
-            </div>
-            <div class="w-6 h-0.5 bg-[#e07a5f] mx-auto mb-2"></div>
-            <h3 class="text-xl font-bold text-[#f4f1de] uppercase heading-font tracking-wide">Festival Coupon Detected!</h3>
-            <p class="text-xs text-[#8ba69b] mt-2 leading-relaxed">
-                Use code <span class="font-mono font-bold text-[#e07a5f] bg-[#0e1411] px-1.5 py-0.5 rounded border border-[#223129]">NAMASTE15</span> to claim an extra ₹1,500 discount on any watch, monitor, or tech item.
-            </p>
-            <div class="mt-6 flex gap-2 justify-center">
-                <button onclick="dismissPopup()" class="bg-[#e07a5f] hover:bg-[#d1654a] text-[#0e1411] text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-lg shadow-lg heading-font">
-                    Dismiss & Continue Browsing
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Cart Modal Drawer -->
     <div id="cart-modal" class="fixed inset-0 bg-black/60 z-50 hidden items-center justify-center p-4">
         <div class="bg-[#141d18] rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#2c3e37]">
