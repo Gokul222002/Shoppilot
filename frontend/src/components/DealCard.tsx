@@ -9,6 +9,7 @@ export interface DealItem {
   original_price?: number;
   discount_percentage?: number;
   rating?: number;
+  currency?: string;
   url?: string;
   image_url?: string;
 }
@@ -19,8 +20,9 @@ interface DealCardProps {
 }
 
 export const DealCard: React.FC<DealCardProps> = ({ deal, isInCart = true }) => {
+  const currencySymbol = deal.currency || "₹";
   const savings = deal.original_price && deal.original_price > deal.price
-    ? (deal.original_price - deal.price).toFixed(2)
+    ? (deal.original_price - deal.price).toLocaleString("en-IN")
     : null;
 
   return (
@@ -58,17 +60,17 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, isInCart = true }) => 
         <div>
           <div className="flex items-baseline gap-2">
             <span className="font-display text-2xl font-black text-sand-100">
-              ${deal.price.toFixed(2)}
+              {currencySymbol}{deal.price.toLocaleString("en-IN")}
             </span>
             {deal.original_price && (
               <span className="text-xs text-alpine-500 line-through font-mono">
-                ${deal.original_price.toFixed(2)}
+                {currencySymbol}{deal.original_price.toLocaleString("en-IN")}
               </span>
             )}
           </div>
           {savings && (
             <span className="mountain-badge text-[10px] text-copper-400 font-bold block mt-0.5">
-              Saved ${savings} vs standard retail
+              Saved {currencySymbol}{savings} vs standard retail
             </span>
           )}
         </div>

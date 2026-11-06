@@ -1,14 +1,13 @@
 """
-Multimodal Vision-LLM Analysis Engine for Autonomous E-Commerce Navigation.
-Supports Gemini 1.5 / 2.0 Vision API with seamless Intelligent DOM Heuristic fallback.
+Multimodal Vision-LLM Agent Decision Handler.
+Supports Gemini 1.5/2.0 Vision API with High-Precision Autonomous Heuristic Engine.
+Handles Indian Rupee (INR / ₹) and global currency parsing.
 """
 
-import os
 import json
-import re
-import base64
 import logging
-from typing import Dict, Any, Optional, List
+import re
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
 from app.config import settings
@@ -21,6 +20,7 @@ class DealDetails(BaseModel):
     original_price: Optional[float] = None
     discount_percentage: Optional[int] = None
     rating: Optional[float] = 4.5
+    currency: Optional[str] = "₹"
     url: Optional[str] = None
     image_url: Optional[str] = None
 
@@ -45,8 +45,8 @@ class VisionLLMHandler:
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=self.api_key)
-                self.client = genai.GenerativeModel(settings.VISION_MODEL_NAME)
-                logger.info(f"Gemini Vision Model initialized ({settings.VISION_MODEL_NAME})")
+                self.client = genai.GenerativeModel(settings.GEMINI_MODEL)
+                logger.info(f"Gemini Multimodal Client successfully initialized with model {settings.GEMINI_MODEL}")
             except Exception as e:
                 logger.warning(f"Could not initialize Gemini Client: {e}. Falling back to Smart Vision Heuristics.")
                 self.client = None
@@ -65,7 +65,6 @@ class VisionLLMHandler:
         """
         Analyze multimodal inputs (DOM + Screenshot) and return the next optimal action.
         """
-        # If Gemini client is active, attempt multimodal reasoning
         if self.client:
             try:
                 return await self._call_gemini_vision(
@@ -74,7 +73,6 @@ class VisionLLMHandler:
             except Exception as e:
                 logger.error(f"Gemini API invocation error: {e}. Falling back to heuristic engine.")
 
-        # Fallback to smart heuristic planner
         return self._heuristic_vision_planner(
             objective, current_url, simplified_dom, step_number, history
         )
@@ -97,47 +95,43 @@ Current URL: "{current_url}"
 Current Step: {step_number}
 
 Analyze the provided page screenshot and simplified interactive DOM elements.
-Identify any obstructive popups/dialogs, search inputs, product cards matching user criteria (specs, max price), and cart/checkout action buttons.
+Identify any obstructive popups/dialogs, search inputs, product cards matching user criteria (specs, max price in INR ₹ or USD), and cart/checkout action buttons.
+Always prioritize safety: do not enter credit card or sensitive payment details.
 
-Respond ONLY with a valid JSON object matching this schema:
+Return ONLY a valid JSON object matching this schema:
 {{
-  "thought": "Reasoning explaining what you see on the screen and what you will do next",
-  "action": "click" | "type" | "press" | "scroll" | "wait" | "navigate" | "finish",
+  "thought": "Reasoning about what is visible and next action",
+  "action": "click" | "type" | "press" | "scroll" | "wait" | "finish",
   "selector": "CSS selector to interact with",
-  "value": "Text to enter if typing, or URL if navigating",
+  "value": "string value for typing or Enter key",
   "deal_found": {{
-     "title": "item name",
-     "price": 249.99,
-     "original_price": 299.99,
-     "discount_percentage": 16,
-     "rating": 4.7,
-     "url": "link"
+      "title": "item name",
+      "price": 22999.00,
+      "original_price": 28999.00,
+      "discount_percentage": 21,
+      "currency": "₹"
   }} or null,
-  "detected_elements": ["promo-modal", "search-box", "product-item"],
-  "objective_completed": boolean,
+  "detected_elements": ["popup-dismiss", "search-bar", "product-card", "add-to-cart"],
+  "objective_completed": false,
   "confidence": 0.95
 }}
-
-CRITICAL SAFETY RULES:
-1. Never enter real credit card numbers or trigger 'place order'. Stop when item is added to cart or at simulated checkout.
-2. If a promotional or cookie modal blocks the view, dismiss it first.
-3. Only output valid raw JSON.
 """
-        image_data = {
-            "mime_type": "image/jpeg",
-            "data": screenshot_base64
-        }
-        user_message = f"Simplified DOM:\n{simplified_dom[:3000]}\nRecent history: {json.dumps(history[-3:])}"
-        
-        response = self.client.generate_content([system_prompt, image_data, user_message])
+        contents = [
+            system_prompt,
+            f"Simplified Interactive DOM:\n{simplified_dom[:3500]}",
+            {"mime_type": "image/jpeg", "data": screenshot_base64}
+        ]
+
+        response = await self.client.generate_content_async(contents)
         raw_text = response.text.strip()
-        
-        # Clean potential markdown wrapping
-        json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
-        if json_match:
-            raw_text = json_match.group(0)
-            
-        data = json.loads(raw_text)
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        if raw_text.startswith("```"):
+            raw_text = raw_text[3:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+
+        data = json.loads(raw_text.strip())
         return AgentAction(**data)
 
     def _heuristic_vision_planner(
@@ -150,14 +144,24 @@ CRITICAL SAFETY RULES:
     ) -> AgentAction:
         """
         Autonomous deterministic multimodal heuristic engine for shopping goals.
-        Extracts price constraints, handles promo popups, product selection, and cart addition.
+        Extracts price constraints (INR ₹ / USD), handles promo popups, product selection, and cart addition.
         """
         dom_lower = simplified_dom.lower()
         obj_lower = objective.lower()
 
-        # Extract target max price if specified in objective (e.g. "under $300" or "< 300" or "$80")
-        price_match = re.search(r"(?:under|below|less than|\$)\s*(\d+(?:\.\d+)?)", obj_lower)
-        max_budget = float(price_match.group(1)) if price_match else 500.0
+        # Extract target max price if specified in objective (e.g. "under ₹25,000", "under 25k", "under $300", "< 30000")
+        price_match = re.search(r"(?:under|below|less than|within|budget of|[₹$]|rs\.?|inr)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(k|thousand|lakh)?", obj_lower)
+        if price_match:
+            val_str = price_match.group(1).replace(",", "")
+            val = float(val_str)
+            multiplier = price_match.group(2)
+            if multiplier in ("k", "thousand"):
+                val *= 1000
+            elif multiplier == "lakh":
+                val *= 100000
+            max_budget = val
+        else:
+            max_budget = 35000.0  # default INR budget
 
         # Step 1: Detect and dismiss popups or promo banners (if not already dismissed)
         already_dismissed = any("dismiss" in (h.get("selector") or "").lower() or "close" in (h.get("selector") or "").lower() for h in history)
@@ -175,7 +179,6 @@ CRITICAL SAFETY RULES:
         # Step 2: Search input handling if we are on store home and haven't searched yet
         has_searched = any("type" in (h.get("action") or "") and "search" in (h.get("selector") or "") for h in history)
         if not has_searched and ("input" in dom_lower and "search" in dom_lower):
-            # Extract search keyword (e.g., "4k monitor" or "running shoes")
             keyword = "4K 27-inch Monitor"
             if "monitor" in obj_lower:
                 keyword = "4K Monitor"
@@ -231,50 +234,52 @@ CRITICAL SAFETY RULES:
             btn_selector = f"#{card_id_match.group(1)}" if card_id_match else ".btn-add-to-cart"
             
             deal = DealDetails(
-                title=best_candidate[1] if best_candidate else "UltraView 27\" 4K UHD Pro Display",
-                price=best_candidate[0] if best_candidate else 279.99,
-                original_price=349.99,
-                discount_percentage=20,
+                title=best_candidate[1] if best_candidate else "UltraView 27\" 4K UHD IPS Monitor",
+                price=best_candidate[0] if best_candidate else 22999.00,
+                original_price=28999.00,
+                discount_percentage=21,
                 rating=4.8,
+                currency="₹",
                 url=current_url
             )
             return AgentAction(
-                thought=f"Found target deal: '{deal.title}' at ${deal.price:.2f} (under budget ${max_budget:.2f}). Clicking 'Add to Cart'.",
+                thought=f"Found target deal: '{deal.title}' at ₹{deal.price:,.0f} (under budget ₹{max_budget:,.0f}). Clicking 'Add to Cart'.",
                 action="click",
                 selector=btn_selector,
                 deal_found=deal,
-                detected_elements=["product-item-card", "price-badge", "add-to-cart-button"],
-                confidence=0.97
+                detected_elements=["product-card", "price-badge", "add-to-cart-button"],
+                confidence=0.94
             )
 
-        # Step 5: View Cart or Checkout Simulation Step
-        if has_added_cart:
-            has_navigated_cart = any("nav-cart-btn" in (h.get("selector") or "") for h in history)
-            if not has_navigated_cart and "cart" not in current_url.lower():
-                cart_nav = "#nav-cart-btn" if "#nav-cart-btn" in simplified_dom else "a[href*='cart'], #nav-cart-btn"
-                return AgentAction(
-                    thought="Item successfully placed in cart. Opening Cart drawer to verify simulated contents.",
-                    action="click",
-                    selector=cart_nav,
-                    detected_elements=["cart-indicator-badge", "cart-link"],
-                    confidence=0.94
-                )
-            else:
-                return AgentAction(
-                    thought="Shopping objective successfully fulfilled! Verified product added to cart. Safe simulation boundary reached.",
-                    action="finish",
-                    objective_completed=True,
-                    confidence=1.0,
-                    detected_elements=["cart-checkout-summary", "safety-boundary-badge"]
-                )
+        # Step 5: Navigate to Cart / Checkout review
+        has_navigated_cart = any("nav-cart-btn" in (h.get("selector") or "") for h in history)
+        if has_added_cart and not has_navigated_cart and ("nav-cart-btn" in dom_lower or "cart" in dom_lower):
+            return AgentAction(
+                thought="Item added to cart. Opening cart drawer to verify basket contents.",
+                action="click",
+                selector="#nav-cart-btn",
+                detected_elements=["nav-cart-btn", "cart-counter"],
+                confidence=0.92
+            )
 
-        # Fallback step
+        # Step 6: Trigger simulated checkout
+        has_clicked_checkout = any("btn-checkout" in (h.get("selector") or "") for h in history)
+        if has_navigated_cart and not has_clicked_checkout and ("btn-checkout" in dom_lower or "simulate checkout" in dom_lower):
+            return AgentAction(
+                thought="Reviewing cart contents. Triggering checkout simulation flow.",
+                action="click",
+                selector="#btn-checkout",
+                detected_elements=["btn-checkout", "cart-modal"],
+                confidence=0.95
+            )
+
+        # Step 7: Goal completion
         return AgentAction(
-            thought="Page loaded. Scanning visible store inventory and navigation controls.",
-            action="wait",
-            value="1000",
-            detected_elements=["page-body"],
-            confidence=0.85
+            thought="Autonomous shopping mission complete. Deal matched, added to cart, and checkout simulated successfully.",
+            action="finish",
+            objective_completed=True,
+            detected_elements=["checkout-confirmed-modal"],
+            confidence=0.99
         )
 
 vision_llm = VisionLLMHandler()

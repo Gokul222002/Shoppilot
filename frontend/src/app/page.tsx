@@ -327,7 +327,7 @@ export default function ShopPilotDashboard() {
               {deals.length > 0 && (
                 <div className="mt-4 pt-3.5 border-t border-alpine-800 flex items-center justify-between">
                   <span className="text-xs text-alpine-300 font-mono">Simulated Cart Subtotal:</span>
-                  <span className="text-2xl font-black text-copper-400 font-mono">${cartTotal.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-copper-400 font-mono">₹{cartTotal.toLocaleString("en-IN")}</span>
                 </div>
               )}
             </div>

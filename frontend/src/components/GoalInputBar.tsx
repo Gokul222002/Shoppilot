@@ -11,9 +11,9 @@ interface GoalInputBarProps {
 }
 
 const PRESETS = [
-  "Find a 4K 27-inch monitor under $300 and add it to cart",
-  "Find running shoes under $80 with discount and add to cart",
-  "Find ANC wireless headphones under $100 and add to cart",
+  "Find a 4K 27-inch monitor under ₹25,000 and add it to cart",
+  "Find running shoes under ₹7,000 with discount and add to cart",
+  "Find ANC wireless headphones under ₹8,000 and add to cart",
 ];
 
 export const GoalInputBar: React.FC<GoalInputBarProps> = ({
@@ -45,7 +45,7 @@ export const GoalInputBar: React.FC<GoalInputBarProps> = ({
             value={objective}
             onChange={(e) => setObjective(e.target.value)}
             disabled={isRunning}
-            placeholder="Enter natural language shopping goal (e.g. 'Find a 4K 27-inch monitor under $300 and add it to cart')..."
+            placeholder="Enter natural language shopping goal (e.g. 'Find a 4K 27-inch monitor under ₹25,000 and add it to cart')..."
             className="w-full bg-alpine-950 border border-alpine-750 rounded-xl pl-12 pr-40 py-3.5 sm:py-4 text-sm sm:text-base text-sand-100 placeholder:text-alpine-500 focus:outline-none focus:ring-2 focus:ring-copper-500/80 focus:border-copper-500 transition shadow-inner font-sans disabled:opacity-60"
           />
           <div className="absolute right-2.5 flex items-center gap-2">
@@ -75,7 +75,7 @@ export const GoalInputBar: React.FC<GoalInputBarProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-alpine-400 font-semibold flex items-center gap-1">
-              <Search className="w-3.5 h-3.5 text-copper-500" /> Presets:
+              <Search className="w-3.5 h-3.5 text-copper-500" /> Presets (INR ₹):
             </span>
             {PRESETS.map((preset, idx) => (
               <button
@@ -83,13 +83,13 @@ export const GoalInputBar: React.FC<GoalInputBarProps> = ({
                 type="button"
                 disabled={isRunning}
                 onClick={() => setObjective(preset)}
-                className={`px-3 py-1 rounded-md border text-xs font-medium transition truncate max-w-xs ${
+                className={`px-3 py-1.5 rounded-lg border transition font-mono text-[11px] ${
                   objective === preset
-                    ? "bg-alpine-800 border-copper-500 text-copper-400 shadow-sm"
-                    : "bg-alpine-950/70 border-alpine-800 text-alpine-300 hover:text-sand-100 hover:border-alpine-700"
+                    ? "bg-copper-950/80 border-copper-500 text-copper-300 font-bold"
+                    : "bg-alpine-950 border-alpine-800 text-sand-300 hover:border-alpine-700 hover:text-sand-100"
                 }`}
               >
-                {preset}
+                {preset.split(" and ")[0]}
               </button>
             ))}
           </div>
@@ -97,24 +97,26 @@ export const GoalInputBar: React.FC<GoalInputBarProps> = ({
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-[11px] text-alpine-400 hover:text-copper-400 flex items-center gap-1.5 transition font-semibold"
+            className="text-[11px] text-alpine-400 hover:text-copper-400 font-mono transition flex items-center gap-1 ml-auto"
           >
-            <Globe className="w-3.5 h-3.5 text-copper-500" />
-            <span>{showAdvanced ? "Hide Target Store" : "Custom Store URL"}</span>
+            <Globe className="w-3.5 h-3.5" />
+            <span>{showAdvanced ? "Hide Target URL" : "Custom Store URL"}</span>
           </button>
         </div>
 
-        {/* Target URL dropdown drawer */}
+        {/* Optional Custom Target URL */}
         {showAdvanced && (
-          <div className="pt-3 border-t border-alpine-800 flex items-center gap-3">
-            <span className="text-xs text-alpine-400 font-medium whitespace-nowrap">Target URL:</span>
+          <div className="pt-2 border-t border-alpine-800/80 animate-in fade-in duration-200">
+            <label className="block text-[11px] font-mono text-alpine-400 mb-1">
+              Target E-Commerce Store URL (Default: Built-in Sandbox Store):
+            </label>
             <input
-              type="text"
+              type="url"
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
               disabled={isRunning}
-              placeholder="Target store URL (default: http://127.0.0.1:8000/mock-store)"
-              className="flex-1 bg-alpine-950 border border-alpine-800 rounded-lg px-3 py-2 text-xs text-sand-300 focus:outline-none focus:ring-1 focus:ring-copper-500 font-mono"
+              placeholder="https://www.amazon.in or http://127.0.0.1:8000/mock-store"
+              className="w-full bg-alpine-950 border border-alpine-750 rounded-lg px-3.5 py-2 text-xs text-sand-100 placeholder:text-alpine-600 focus:outline-none focus:ring-1 focus:ring-copper-500 font-mono"
             />
           </div>
         )}

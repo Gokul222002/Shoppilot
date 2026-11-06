@@ -45,7 +45,7 @@ async def run_e2e_agent_test():
         # Send shopping command
         goal_msg = {
             "action": "START_MISSION",
-            "objective": "Find a 4K 27-inch monitor under $300 and add it to cart",
+            "objective": "Find a 4K 27-inch monitor under ₹25,000 and add it to cart",
             "start_url": f"{BACKEND_URL}/mock-store"
         }
         await ws.send(json.dumps(goal_msg))
