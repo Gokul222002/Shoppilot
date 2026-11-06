@@ -1,0 +1,45 @@
+# Render Blueprint Specification for ShopPilot
+services:
+  # Backend FastAPI & Playwright Service
+  - type: web
+    name: shoppilot-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: starter # Starter (1GB RAM) recommended for Playwright Chromium
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: HOST
+        value: 0.0.0.0
+      - key: HEADLESS
+        value: "true"
+      - key: ENABLE_PURCHASE_PREVENTION
+        value: "true"
+      - key: GEMINI_API_KEY
+        sync: false # Set in Render dashboard
+      - key: WEBHOOK_URL
+        value: "http://localhost:8000/api/webhook/mock"
+
+  # Frontend Next.js Service
+  - type: web
+    name: shoppilot-frontend
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: frontend
+    plan: starter
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: shoppilot-backend
+          type: web
+          property: host
+      - key: NEXT_PUBLIC_WS_URL
+        fromService:
+          name: shoppilot-backend
+          type: web
+          property: host

@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0e1411;
+  --foreground: #f4f1de;
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Trailhead Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #141d18;
+}
+::-webkit-scrollbar-thumb {
+  background: #2e423a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #e07a5f;
+}
+
+/* Earthy atmospheric gradient overlay */
+.trailhead-bg {
+  background: radial-gradient(circle at 50% 0%, rgba(67, 94, 83, 0.15) 0%, rgba(14, 20, 17, 0.98) 75%);
+}
+
+.mountain-badge {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-family: 'Space Mono', monospace;
+}
