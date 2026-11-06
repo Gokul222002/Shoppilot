@@ -19,18 +19,22 @@ async def mock_store_home(q: Optional[str] = Query(None)):
     filtered_products = search_products(q) if q else MOCK_PRODUCTS
 
     products_html = ""
-    for p in filtered_products:
+    for idx, p in enumerate(filtered_products):
         clean_title = p["title"].replace('"', '&quot;').replace("'", "")
         safe_js_title = p["title"].replace("'", "").replace('"', '')
+        p_id = p.get("id") or f"prod-{idx+1:02d}"
+        p_img = p.get("image") or p.get("image_url", "")
+        p_price = p.get("price", 999.0)
+        p_orig_price = p.get("original_price", p_price * 1.3)
         store_name = p.get("store", "Amazon.in")
-        store_url = p.get("url", f"https://www.amazon.in/s?k={p['title']}")
+        store_url = p.get("product_url") or p.get("url", f"https://www.amazon.in/s?k={p['title']}")
         specs_badges = "".join([f'<span class="bg-[#1e2a24] text-[#b2c5bd] text-xs px-2 py-0.5 rounded font-mono border border-[#273830]">{s}</span>' for s in p.get("specs", [])[:3]])
         
         products_html += f"""
         <div class="product-card bg-[#151e19] rounded-2xl shadow-xl border border-[#223129] overflow-hidden hover:border-[#e07a5f]/60 transition duration-300 flex flex-col justify-between"
-             data-id="{p['id']}" data-price="{p['price']}" data-title="{clean_title}" data-category="{p.get('category', '')}" data-store="{store_name}" data-url="{store_url}">
+             data-id="{p_id}" data-price="{p_price}" data-title="{clean_title}" data-category="{p.get('category', '')}" data-store="{store_name}" data-url="{store_url}">
             <div class="relative">
-                <img src="{p['image']}" alt="{clean_title}" class="w-full h-52 object-cover">
+                <img src="{p_img}" alt="{clean_title}" class="w-full h-52 object-cover">
                 <span class="absolute top-2.5 left-2.5 bg-[#1b2621]/90 backdrop-blur-md text-[#e07a5f] border border-[#e07a5f]/40 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow">
                     {p.get('badge', 'VERIFIED DEAL')}
                 </span>
@@ -62,8 +66,8 @@ async def mock_store_home(q: Optional[str] = Query(None)):
                 </div>
                 <div class="mt-5 pt-3.5 border-t border-[#223129] flex items-center justify-between gap-3">
                     <div>
-                        <div class="text-2xl font-black text-[#f4f1de] font-mono">₹{p['price']:,.0f}</div>
-                        <div class="text-xs text-[#72877e] line-through font-mono">₹{p.get('original_price', p['price'] * 1.3):,.0f}</div>
+                        <div class="text-2xl font-black text-[#f4f1de] font-mono">₹{p_price:,.0f}</div>
+                        <div class="text-xs text-[#72877e] line-through font-mono">₹{p_orig_price:,.0f}</div>
                     </div>
                     <div class="flex items-center gap-2">
                         <a href="{store_url}" target="_blank" rel="noreferrer"
@@ -71,7 +75,7 @@ async def mock_store_home(q: Optional[str] = Query(None)):
                            title="Visit real product page on {store_name}">
                             <span>↗</span>
                         </a>
-                        <button id="add-to-cart-{p['id']}" onclick="addToCart('{p['id']}', '{safe_js_title}', {p['price']}, '{store_name}', '{store_url}')"
+                        <button id="add-to-cart-{p_id}" onclick="addToCart('{p_id}', '{safe_js_title}', {p_price}, '{store_name}', '{store_url}')"
                                 class="btn-add-to-cart bg-[#e07a5f] hover:bg-[#d1654a] text-[#0e1411] text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg shadow-md transition active:scale-95 flex items-center gap-1.5">
                             <span>🛒 Add to Cart</span>
                         </button>
