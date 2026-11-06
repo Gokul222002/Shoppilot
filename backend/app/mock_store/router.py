@@ -244,33 +244,12 @@ async def mock_store_home(q: Optional[str] = Query(None)):
         }};
 
         function doFilterSearch() {{
-            const rawQuery = (document.getElementById('search-input').value || '').toLowerCase().trim();
-            const words = rawQuery ? rawQuery.split(/\\s+/).filter(w => w.length > 1) : [];
-            const cards = document.querySelectorAll('.product-card');
-
-            let expandedQuery = [...words];
-            words.forEach(w => {{
-                for (const [key, syns] of Object.entries(termAliases)) {{
-                    if (w === key || syns.includes(w)) {{
-                        expandedQuery.push(...syns);
-                    }}
-                }}
-            }});
-
-            cards.forEach(card => {{
-                const title = (card.getAttribute('data-title') || '').toLowerCase();
-                const category = (card.getAttribute('data-category') || '').toLowerCase();
-                const store = (card.getAttribute('data-store') || '').toLowerCase();
-                const fullText = title + ' ' + category + ' ' + store;
-
-                if (words.length === 0) {{
-                    card.style.display = 'flex';
-                    return;
-                }}
-
-                const matches = expandedQuery.some(term => fullText.includes(term));
-                card.style.display = matches ? 'flex' : 'none';
-            }});
+            const rawQuery = (document.getElementById('search-input').value || '').trim();
+            if (rawQuery) {{
+                window.location.href = '/mock-store?q=' + encodeURIComponent(rawQuery);
+            }} else {{
+                window.location.href = '/mock-store';
+            }}
         }}
 
         function dismissPopup() {{

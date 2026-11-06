@@ -276,24 +276,52 @@ export default function ShopPilotDashboard() {
     setCurrentUrl(`${backendHttp}/mock-store`);
 
     const objLower = objective.toLowerCase();
-    let queryTerm = "4K 27-inch Monitor";
-    let matchedDeal: DealItem = {
-      title: 'UltraView 27" 4K UHD IPS Professional Monitor',
-      price: 22999,
-      original_price: 28999,
-      discount_percentage: 21,
-      rating: 4.8,
-      currency: "₹",
-      store: "Amazon.in",
-      url: "https://www.amazon.in/s?k=27+inch+4k+monitor",
-      specs: ["3840 x 2160 UHD", "IPS 144Hz 1ms", "HDR400 & USB-C 65W PD"]
-    };
+    
+    // Extract query keyword dynamically
+    const cleaned = objLower
+      .replace(/^(find|search|get|look for|buy)\s+/i, "")
+      .replace(/(\s+and\s+add\s+to\s+cart|\s+and\s+add\s+it\s+to\s+cart|\s+with\s+discount|\s+under\s+.*|\s+below\s+.*|\s+for\s+\d+.*)$/i, "")
+      .trim();
+    let queryTerm = cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : "Smartwatch";
 
-    if (objLower.includes("watch")) {
+    // Extract budget dynamically
+    const budgetMatch = objective.match(/(?:under|below|for|budget|within)\s*(?:₹|rs\.?|inr)?\s*([\d,]+)/i);
+    const parsedBudget = budgetMatch ? parseInt(budgetMatch[1].replace(/,/g, ""), 10) : 5000;
+    const safePrice = Math.round(parsedBudget * 0.72);
+    const safeOrig = Math.round(safePrice * 1.4);
+    const discount = Math.round((1 - safePrice / safeOrig) * 100);
+
+    let matchedDeals: DealItem[] = [
+      {
+        title: `${queryTerm} Pro Edition (Top Rated on Amazon India)`,
+        price: safePrice,
+        original_price: safeOrig,
+        discount_percentage: discount,
+        rating: 4.6,
+        currency: "₹",
+        store: "Amazon.in",
+        url: `https://www.amazon.in/s?k=${encodeURIComponent(queryTerm)}`,
+        specs: [`Matches '${queryTerm}'`, "Fulfilled by Amazon", "Free Express Delivery", "Verified Seller"]
+      },
+      {
+        title: `Flipkart Assured: ${queryTerm} Value Edition`,
+        price: Math.round(safePrice * 0.88),
+        original_price: safeOrig,
+        discount_percentage: discount + 8,
+        rating: 4.5,
+        currency: "₹",
+        store: "Flipkart",
+        url: `https://www.flipkart.com/search?q=${encodeURIComponent(queryTerm)}`,
+        specs: [`Best Value for '${queryTerm}'`, "Flipkart Assured", "Cash on Delivery", "7-Day Replacement"]
+      }
+    ];
+
+    // Specific category overrides for high-volume Indian market queries
+    if (objLower.includes("watch") || objLower.includes("smartwatch")) {
       queryTerm = "Smartwatch";
-      matchedDeal = {
+      matchedDeals[0] = {
         title: "Noise ColorFit Ultra 3 Bluetooth Calling Smartwatch",
-        price: 2499,
+        price: Math.min(parsedBudget, 2499),
         original_price: 7999,
         discount_percentage: 68,
         rating: 4.4,
@@ -302,11 +330,118 @@ export default function ShopPilotDashboard() {
         url: "https://www.amazon.in/s?k=Noise+ColorFit+Ultra+3+Smartwatch",
         specs: ["1.96\" AMOLED Display", "BT Calling & AI Voice", "7-Day Battery"]
       };
+      matchedDeals[1] = {
+        title: "Fire-Boltt Phoenix Pro Bluetooth Calling Smartwatch",
+        price: Math.min(parsedBudget, 1499),
+        original_price: 11999,
+        discount_percentage: 87,
+        rating: 4.3,
+        currency: "₹",
+        store: "Flipkart",
+        url: "https://www.flipkart.com/search?q=Fire+Boltt+Phoenix+Pro",
+        specs: ["1.39\" Round Display", "120+ Sports Modes", "IP67 Water Resistant"]
+      };
+    } else if (objLower.includes("skincare") || objLower.includes("cleanser") || objLower.includes("face wash")) {
+      queryTerm = "Face Wash";
+      matchedDeals[0] = {
+        title: "CeraVe Foaming Cleanser for Normal to Oily Skin (236ml)",
+        price: Math.min(parsedBudget, 1061),
+        original_price: 1499,
+        discount_percentage: 29,
+        rating: 4.6,
+        currency: "₹",
+        store: "Amazon.in",
+        url: "https://www.amazon.in/s?k=CeraVe+Foaming+Cleanser",
+        specs: ["3 Essential Ceramides", "Hyaluronic Acid", "Dermatologist Tested"]
+      };
+      matchedDeals[1] = {
+        title: "Cetaphil Gentle Skin Cleanser for Sensitive Skin (250ml)",
+        price: Math.min(parsedBudget, 599),
+        original_price: 799,
+        discount_percentage: 25,
+        rating: 4.5,
+        currency: "₹",
+        store: "Amazon.in",
+        url: "https://www.amazon.in/s?k=Cetaphil+Gentle+Skin+Cleanser",
+        specs: ["Hydrating Glycerin & B5", "Soap-Free Gentle", "All Skin Types"]
+      };
+    } else if (objLower.includes("guitar")) {
+      queryTerm = "Acoustic Guitar";
+      matchedDeals[0] = {
+        title: "Kadence Frontier 40\" Electro Acoustic Guitar with Truss Rod",
+        price: Math.min(parsedBudget, 5325),
+        original_price: 7999,
+        discount_percentage: 33,
+        rating: 4.5,
+        currency: "₹",
+        store: "Amazon.in",
+        url: "https://www.amazon.in/s?k=Kadence+Frontier+Acoustic+Guitar",
+        specs: ["Rosewood Fretboard", "Stainless Steel Strings", "With Bag & Picks"]
+      };
+      matchedDeals[1] = {
+        title: "Intern 38C Acoustic Guitar for Beginners with Cutaway Design",
+        price: Math.min(parsedBudget, 1899),
+        original_price: 3990,
+        discount_percentage: 52,
+        rating: 4.3,
+        currency: "₹",
+        store: "Flipkart",
+        url: "https://www.flipkart.com/search?q=Intern+38C+Acoustic+Guitar",
+        specs: ["Linden Wood Body", "Full Accessory Kit", "Ebony Fretboard"]
+      };
+    } else if (objLower.includes("protein") || objLower.includes("whey")) {
+      queryTerm = "Whey Protein 1kg";
+      matchedDeals[0] = {
+        title: "NAKPRO NUTRITION Impact Whey Protein Isolate 1kg",
+        price: Math.min(parsedBudget, 1519),
+        original_price: 2499,
+        discount_percentage: 39,
+        rating: 4.5,
+        currency: "₹",
+        store: "Amazon.in",
+        url: "https://www.amazon.in/s?k=NAKPRO+Impact+Whey+Protein",
+        specs: ["28g Protein per Scoop", "Zero Added Sugar", "Labdoor Certified"]
+      };
+      matchedDeals[1] = {
+        title: "MuscleTech Nitro-Tech Whey Gold Protein Powder 1kg",
+        price: Math.min(parsedBudget, 2249),
+        original_price: 3699,
+        discount_percentage: 39,
+        rating: 4.5,
+        currency: "₹",
+        store: "Flipkart",
+        url: "https://www.flipkart.com/search?q=MuscleTech+Nitro+Tech+Whey+Gold",
+        specs: ["24g Ultra-Pure Whey", "5.5g BCAAs", "Fast Absorption Formula"]
+      };
+    } else if (objLower.includes("monitor") || objLower.includes("screen") || objLower.includes("4k")) {
+      queryTerm = "4K 27-inch Monitor";
+      matchedDeals[0] = {
+        title: 'UltraView 27" 4K UHD IPS Professional Monitor',
+        price: Math.min(parsedBudget, 22999),
+        original_price: 28999,
+        discount_percentage: 21,
+        rating: 4.8,
+        currency: "₹",
+        store: "Amazon.in",
+        url: "https://www.amazon.in/s?k=27+inch+4k+monitor",
+        specs: ["3840 x 2160 UHD", "IPS 144Hz 1ms", "HDR400 & USB-C 65W PD"]
+      };
+      matchedDeals[1] = {
+        title: 'ProScreen 32" 4K Curved HDR Display',
+        price: Math.min(parsedBudget, 31999),
+        original_price: 42000,
+        discount_percentage: 24,
+        rating: 4.6,
+        currency: "₹",
+        store: "Flipkart",
+        url: "https://www.flipkart.com/search?q=32+inch+4k+curved+monitor",
+        specs: ["1500R Curve", "4K Ultra-HD", "165Hz Refresh"]
+      };
     } else if (objLower.includes("shoe") || objLower.includes("sneaker")) {
       queryTerm = "Running Shoes";
-      matchedDeal = {
+      matchedDeals[0] = {
         title: "Nike Revolution 7 Men's Road Running Shoes",
-        price: 3199,
+        price: Math.min(parsedBudget, 3199),
         original_price: 4495,
         discount_percentage: 28,
         rating: 4.5,
@@ -316,10 +451,10 @@ export default function ShopPilotDashboard() {
         specs: ["Soft Foam Midsole", "Breathable Mesh Upper", "Generative Traction"]
       };
     } else if (objLower.includes("headphone") || objLower.includes("earbud")) {
-      queryTerm = "ANC Earbuds";
-      matchedDeal = {
+      queryTerm = "ANC Wireless Earbuds";
+      matchedDeals[0] = {
         title: "boAt Nirvana Ion ANC True Wireless Earbuds",
-        price: 2299,
+        price: Math.min(parsedBudget, 2299),
         original_price: 7990,
         discount_percentage: 71,
         rating: 4.4,
@@ -330,9 +465,9 @@ export default function ShopPilotDashboard() {
       };
     } else if (objLower.includes("phone") || objLower.includes("mobile")) {
       queryTerm = "5G Smartphone";
-      matchedDeal = {
+      matchedDeals[0] = {
         title: "OnePlus Nord CE 4 5G (8GB RAM, 128GB Storage)",
-        price: 24999,
+        price: Math.min(parsedBudget, 24999),
         original_price: 26999,
         discount_percentage: 7,
         rating: 4.5,
@@ -342,6 +477,8 @@ export default function ShopPilotDashboard() {
         specs: ["Snapdragon 7 Gen 3", "100W SuperVOOC Fast Charge", "50MP Sony LYT-600"]
       };
     }
+
+    const matchedDeal = matchedDeals[0];
 
     setActionMessage("Navigating to Trailhead India Sandbox Store...");
     setScreenshot(createSimSvg("Trailhead Supply Co. / India Storefront", "Active Storefront Loaded - Scanning DOM Hierarchy", "STEP 1: NAVIGATION", undefined, matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
@@ -401,7 +538,7 @@ export default function ShopPilotDashboard() {
           setConfidence(0.95);
           setScreenshot(createSimSvg(`Matched Product: ${matchedDeal.title}`, `Price verified at ₹${matchedDeal.price.toLocaleString("en-IN")} on ${matchedDeal.store}`, "STEP 4: SPEC & BUDGET MATCH", "Clicking #add-to-cart-101", matchedDeal.title, matchedDeal.price, matchedDeal.original_price, matchedDeal.store));
 
-          setDeals([matchedDeal]);
+          setDeals(matchedDeals);
 
           setStepLogs(prev => [
             ...prev,

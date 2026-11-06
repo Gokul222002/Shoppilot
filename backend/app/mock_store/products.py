@@ -378,7 +378,10 @@ def search_products(query: str, max_budget: float = float("inf")) -> List[Dict[s
         "shoe": ["shoe", "shoes", "sneaker", "sneakers", "running", "hyperstride", "revolution", "dazzler", "nike", "puma"],
         "headphone": ["headphone", "headphones", "earbuds", "earbud", "audio", "soundpulse", "nirvana", "buds", "boat", "sony"],
         "laptop": ["laptop", "vivobook", "blade", "notebook", "computer"],
-        "phone": ["phone", "oneplus", "iphone", "smartphone", "5g", "mobile"]
+        "phone": ["phone", "oneplus", "iphone", "smartphone", "5g", "mobile"],
+        "skincare": ["skincare", "cleanser", "face", "wash", "cerave", "cetaphil", "himalaya", "minimalist", "derma"],
+        "guitar": ["guitar", "acoustic", "kadence", "intern", "juarez"],
+        "protein": ["protein", "whey", "isolate", "nakpro", "muscletech"]
     }
 
     expanded_terms = set(words)
@@ -411,42 +414,62 @@ def search_products(query: str, max_budget: float = float("inf")) -> List[Dict[s
     # If no results matched, dynamically generate authentic Indian market offers for the exact query
     if not results and words:
         clean_name = query.title()
-        safe_price = min(max_budget * 0.75, 1499.0) if max_budget < float("inf") else 1299.0
-        safe_orig = round(safe_price * 1.4, 2)
-        discount = int(round((1 - safe_price / safe_orig) * 100))
+        ref_budget = max_budget if max_budget < float("inf") else 4999.0
+        safe_price_1 = round(ref_budget * 0.72, 2)
+        safe_price_2 = round(ref_budget * 0.58, 2)
+        safe_price_3 = round(ref_budget * 0.88, 2)
+        safe_orig_1 = round(safe_price_1 * 1.45, 2)
+        safe_orig_2 = round(safe_price_2 * 1.35, 2)
+        safe_orig_3 = round(safe_price_3 * 1.5, 2)
 
         results = [
             {
                 "id": "dyn-01",
-                "title": f"Top Rated Deal: {clean_name} (Fast Dispatch)",
+                "title": f"Bestseller: {clean_name} Pro Edition (Top Rated in India)",
                 "category": "Live Deal",
-                "price": round(safe_price, 2),
-                "original_price": safe_orig,
-                "discount_pct": discount,
+                "price": safe_price_1,
+                "original_price": safe_orig_1,
+                "discount_pct": int(round((1 - safe_price_1 / safe_orig_1) * 100)),
                 "rating": 4.6,
-                "reviews": 8420,
-                "badge": "BEST PRICE",
+                "reviews": 11420,
+                "badge": "AMAZON CHOICE",
                 "specs": [f"Matches '{query}'", "Fulfilled by Amazon", "Free Express Delivery", "Verified Seller"],
                 "store": "Amazon.in",
                 "url": f"https://www.amazon.in/s?k={urllib.parse.quote_plus(query)}",
                 "in_stock": True,
-                "image": "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500&auto=format&fit=crop&q=60"
+                "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"
             },
             {
                 "id": "dyn-02",
                 "title": f"Flipkart Assured: {clean_name} Premium Edition",
                 "category": "Live Deal",
-                "price": round(safe_price * 0.92, 2),
-                "original_price": safe_orig,
-                "discount_pct": discount + 8,
-                "rating": 4.4,
-                "reviews": 4120,
-                "badge": "FLIPKART CHOICE",
+                "price": safe_price_2,
+                "original_price": safe_orig_2,
+                "discount_pct": int(round((1 - safe_price_2 / safe_orig_2) * 100)),
+                "rating": 4.5,
+                "reviews": 6890,
+                "badge": "FLIPKART ASSURED",
                 "specs": [f"Best Value for '{query}'", "Flipkart Assured", "Cash on Delivery", "7-Day Replacement"],
                 "store": "Flipkart",
                 "url": f"https://www.flipkart.com/search?q={urllib.parse.quote_plus(query)}",
                 "in_stock": True,
-                "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"
+                "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60"
+            },
+            {
+                "id": "dyn-03",
+                "title": f"Special Offer: {clean_name} Elite Pack (Fast Shipping)",
+                "category": "Live Deal",
+                "price": safe_price_3,
+                "original_price": safe_orig_3,
+                "discount_pct": int(round((1 - safe_price_3 / safe_orig_3) * 100)),
+                "rating": 4.4,
+                "reviews": 3210,
+                "badge": "LIMITED DEAL",
+                "specs": [f"Top Pick for '{query}'", "Special Discount", "Warranty Included", "Express Shipping"],
+                "store": "Amazon.in",
+                "url": f"https://www.amazon.in/s?k={urllib.parse.quote_plus(query)}",
+                "in_stock": True,
+                "image": "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=500&auto=format&fit=crop&q=60"
             }
         ]
 
