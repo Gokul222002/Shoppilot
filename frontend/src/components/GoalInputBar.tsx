@@ -26,10 +26,20 @@ export const GoalInputBar: React.FC<GoalInputBarProps> = ({
   const [targetUrl, setTargetUrl] = useState(defaultStoreUrl || "http://127.0.0.1:8000/mock-store");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  // Sync targetUrl with incoming defaultStoreUrl
+  React.useEffect(() => {
+    if (defaultStoreUrl && !showAdvanced) {
+      setTargetUrl(defaultStoreUrl);
+    }
+  }, [defaultStoreUrl, showAdvanced]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!objective.trim() || isRunning) return;
-    onStartMission(objective, targetUrl);
+    const finalUrl = showAdvanced && targetUrl.trim() && !targetUrl.includes("xxxx")
+      ? targetUrl.trim()
+      : (defaultStoreUrl || "");
+    onStartMission(objective, finalUrl);
   };
 
   return (

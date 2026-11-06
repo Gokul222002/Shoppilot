@@ -29,7 +29,10 @@ class ShoppingMissionPlanner:
     def __init__(self, job_id: str, objective: str, start_url: Optional[str] = None):
         self.job_id = job_id
         self.objective = objective
-        self.start_url = start_url or f"http://127.0.0.1:{settings.PORT}/mock-store"
+        if not start_url or "mock-store" in start_url or "xxxx" in start_url:
+            self.start_url = f"http://127.0.0.1:{settings.PORT}/mock-store"
+        else:
+            self.start_url = start_url
         self.state = MissionState.PENDING
         self.step_history: List[Dict[str, Any]] = []
         self.extracted_deals: List[Dict[str, Any]] = []

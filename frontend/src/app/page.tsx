@@ -401,13 +401,18 @@ export default function ShopPilotDashboard() {
     setSafetyReason(undefined);
     setActionMessage("Initializing headless browser & Multimodal Vision pipeline...");
 
+    const effectiveUrl = (!targetUrl || targetUrl.includes("xxxx"))
+      ? `${backendHttp}/mock-store`
+      : targetUrl;
+    setCurrentUrl(effectiveUrl);
+
     // If connected via real WebSocket, execute live mission
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(
         JSON.stringify({
           action: "START_MISSION",
           objective,
-          start_url: targetUrl,
+          start_url: effectiveUrl,
         })
       );
     } else {
@@ -416,7 +421,7 @@ export default function ShopPilotDashboard() {
         const res = await fetch(`${backendHttp}/api/jobs`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ objective, start_url: targetUrl }),
+          body: JSON.stringify({ objective, start_url: effectiveUrl }),
         });
         if (res.ok) {
           const data = await res.json();
