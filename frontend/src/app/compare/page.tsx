@@ -7,6 +7,7 @@ import OfferRow from "@/components/OfferRow";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
 import ProductCard from "@/components/ProductCard";
 import SearchBar from "@/components/SearchBar";
+import CompareAlertButton from "@/components/CompareAlertButton";
 
 const connector = new MockConnector();
 
@@ -156,6 +157,11 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
                     </span>
                   )}
                 </div>
+              </div>
+
+              {/* Set Price Drop Alert Action */}
+              <div className="flex items-center gap-3">
+                <CompareAlertButton product={product} currentPrice={bestOffer.price} />
               </div>
 
               {/* Affiliate Disclosure */}

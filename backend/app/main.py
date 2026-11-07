@@ -374,6 +374,99 @@ async def get_product(product_id: str):
     return product
 
 
+# ─── Price-Drop Alerts System ─────────────────────────────────────────────────
+
+class CreateAlertRequest(BaseModel):
+    product_id: str
+    product_name: str
+    email: str
+    target_price: int
+    current_price: Optional[int] = None
+
+price_alerts: List[Dict[str, Any]] = []
+
+@app.post("/api/alerts")
+async def create_price_alert(payload: CreateAlertRequest):
+    """Register a user email for price drop alerts on a product."""
+    alert_id = f"alt-{len(price_alerts) + 1:04d}"
+    alert_record = {
+        "id": alert_id,
+        "product_id": payload.product_id,
+        "product_name": payload.product_name,
+        "email": payload.email,
+        "target_price": payload.target_price,
+        "current_price": payload.current_price,
+        "created_at": date.today().isoformat(),
+        "status": "ACTIVE",
+    }
+    # Update if already exists for same email & product
+    existing = next((a for a in price_alerts if a["email"] == payload.email and a["product_id"] == payload.product_id), None)
+    if existing:
+        existing.update({
+            "target_price": payload.target_price,
+            "current_price": payload.current_price,
+        })
+        logger.info(f"Updated price alert for {payload.email} on {payload.product_name}")
+        return {"status": "UPDATED", "alert": existing}
+    
+    price_alerts.append(alert_record)
+    logger.info(f"Created price alert {alert_id} for {payload.email} on {payload.product_name} at target ₹{payload.target_price}")
+    return {"status": "CREATED", "alert": alert_record}
+
+
+@app.get("/api/alerts")
+async def list_price_alerts(email: Optional[str] = None):
+    """List active price drop alerts, optionally filtered by user email."""
+    if email:
+        return {"alerts": [a for a in price_alerts if a["email"] == email]}
+    return {"alerts": price_alerts, "total": len(price_alerts)}
+
+
+@app.delete("/api/alerts/{alert_id}")
+async def delete_price_alert(alert_id: str):
+    """Unsubscribe or delete a price drop alert."""
+    global price_alerts
+    initial_len = len(price_alerts)
+    price_alerts = [a for a in price_alerts if a["id"] != alert_id]
+    if len(price_alerts) == initial_len:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"status": "DELETED", "alert_id": alert_id}
+
+
+@app.post("/api/alerts/check")
+async def check_price_alerts():
+    """
+    Background simulation worker: Checks all active alerts against latest product prices.
+    Dispatches mock notification / console-log email for any alerts where current_price <= target_price.
+    """
+    triggered = []
+    for alert in price_alerts:
+        prod = next((p for p in PRODUCTS if p["id"] == alert["product_id"]), None)
+        if prod:
+            current_lowest = prod["best_price"]
+            if current_lowest <= alert["target_price"]:
+                alert["status"] = "TRIGGERED"
+                alert["triggered_at"] = date.today().isoformat()
+                logger.info(
+                    f"[EMAIL DISPATCHED] To: {alert['email']} | Subject: Price Drop Alert: {alert['product_name']} "
+                    f"is now ₹{current_lowest} (Your target was ₹{alert['target_price']})!"
+                )
+                triggered.append({
+                    "alert_id": alert["id"],
+                    "email": alert["email"],
+                    "product": alert["product_name"],
+                    "target_price": alert["target_price"],
+                    "current_price": current_lowest,
+                })
+    return {
+        "status": "CHECK_COMPLETE",
+        "total_evaluated": len(price_alerts),
+        "triggered_count": len(triggered),
+        "triggered_alerts": triggered,
+    }
+
+
+
 # ─── WebSocket Endpoint ───────────────────────────────────────────────────────
 
 @app.websocket("/ws/agent")

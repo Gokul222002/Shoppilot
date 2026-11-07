@@ -73,3 +73,40 @@ def test_api_single_product_detail():
     data = response.json()
     assert data['id'] == 'ph-001'
     assert 'price_history' in data
+
+
+def test_create_and_list_price_alert():
+    payload = {
+        'product_id': 'ph-001',
+        'product_name': 'Apple iPhone 15',
+        'email': 'gokul@example.com',
+        'target_price': 60000,
+        'current_price': 65999
+    }
+    resp = client.post('/api/alerts', json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data['status'] in ('CREATED', 'UPDATED')
+    alert_id = data['alert']['id']
+
+    # List alerts for email
+    list_resp = client.get('/api/alerts?email=gokul@example.com')
+    assert list_resp.status_code == 200
+    alerts = list_resp.json()['alerts']
+    assert any(a['id'] == alert_id for a in alerts)
+
+def test_check_price_alerts_worker():
+    # Set target price above current best_price to trigger
+    payload = {
+        'product_id': 'ph-001',
+        'product_name': 'Apple iPhone 15',
+        'email': 'gokul_alert@example.com',
+        'target_price': 70000,
+        'current_price': 65999
+    }
+    client.post('/api/alerts', json=payload)
+    check_resp = client.post('/api/alerts/check')
+    assert check_resp.status_code == 200
+    result = check_resp.json()
+    assert result['status'] == 'CHECK_COMPLETE'
+    assert result['triggered_count'] >= 1

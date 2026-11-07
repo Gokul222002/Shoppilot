@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Sparkles, TrendingDown, Scale, ShieldCheck } from "lucide-react";
+import { Sparkles, TrendingDown, Scale, ShieldCheck, Heart } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 
 export default function Navbar() {
@@ -36,7 +36,7 @@ export default function Navbar() {
         {/* Action Links */}
         <div className="flex items-center gap-2">
           <Link
-            href="/search?sort_by=discount"
+            href="/deals"
             className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-3 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
           >
             <TrendingDown className="w-3.5 h-3.5 text-orange-400" />
@@ -49,6 +49,14 @@ export default function Navbar() {
           >
             <Scale className="w-3.5 h-3.5 text-blue-400" />
             <span>Browse All</span>
+          </Link>
+
+          <Link
+            href="/wishlist"
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-3 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
+          >
+            <Heart className="w-3.5 h-3.5 text-pink-400" />
+            <span>Watchlist</span>
           </Link>
         </div>
       </nav>
