@@ -1,0 +1,802 @@
+[
+  {
+    "id": "pair-pos-001",
+    "title_a": "Realme 12 Pro+ 5G (Submarine Blue, 256GB)",
+    "title_b": "REALME 12 Pro Plus 5G (Submarine Blue, 256 GB)",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same phone, different casing/spacing"
+  },
+  {
+    "id": "pair-pos-002",
+    "title_a": "Realme 12 Pro+ 5G (Navigator Beige, 128GB)",
+    "title_b": "Realme 12 Pro Plus 5G Beige 128 GB ROM",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same phone, abbreviation"
+  },
+  {
+    "id": "pair-pos-003",
+    "title_a": "Realme 12 Pro 5G (Submarine Blue, 128GB)",
+    "title_b": "Realme 12 Pro 5G (128GB Storage, Submarine Blue)",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Rearranged title tokens"
+  },
+  {
+    "id": "pair-pos-004",
+    "title_a": "Realme Narzo 70 Pro 5G (Glass Green, 256GB)",
+    "title_b": "realme Narzo 70 Pro 5G 256GB Glass Green",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Lowercase store title"
+  },
+  {
+    "id": "pair-pos-005",
+    "title_a": "Realme Narzo 60x 5G (Stellar Green, 128GB)",
+    "title_b": "Realme Narzo 60X 5G Stellar Green 128 GB",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Case difference"
+  },
+  {
+    "id": "pair-pos-006",
+    "title_a": "Realme GT 6T 5G (Fluid Silver, 256GB)",
+    "title_b": "Realme GT 6T 5G 256GB Fluid Silver Smartphone",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Added smartphone suffix"
+  },
+  {
+    "id": "pair-pos-007",
+    "title_a": "Realme P1 Pro 5G (Phoenix Red, 128GB)",
+    "title_b": "Realme P1 Pro 5G (128 GB, Phoenix Red)",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Punctuation variance"
+  },
+  {
+    "id": "pair-pos-008",
+    "title_a": "Apple iPhone 15 (128 GB) - Black",
+    "title_b": "Apple iPhone 15 128GB Black Smartphone",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Retailer listing variance"
+  },
+  {
+    "id": "pair-pos-009",
+    "title_a": "Apple iPhone 15 (256 GB) - Blue",
+    "title_b": "Apple iPhone 15 Blue 256GB",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Standard retailer title"
+  },
+  {
+    "id": "pair-pos-010",
+    "title_a": "Apple iPhone 15 Plus (128 GB) - Pink",
+    "title_b": "Apple iPhone 15 Plus Pink 128GB",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same variant"
+  },
+  {
+    "id": "pair-pos-011",
+    "title_a": "Apple iPhone 15 Pro (256 GB) - Natural Titanium",
+    "title_b": "Apple iPhone 15 Pro 256GB Natural Titanium",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same variant"
+  },
+  {
+    "id": "pair-pos-012",
+    "title_a": "Apple iPhone 15 Pro Max (256 GB) - Blue Titanium",
+    "title_b": "Apple iPhone 15 Pro Max 256GB Blue Titanium",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same variant"
+  },
+  {
+    "id": "pair-pos-013",
+    "title_a": "Samsung Galaxy S24 Ultra 5G (Titanium Gray, 512GB)",
+    "title_b": "Samsung Galaxy S24 Ultra 512GB Titanium Gray",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same variant"
+  },
+  {
+    "id": "pair-pos-014",
+    "title_a": "Samsung Galaxy S24 Ultra 5G (Titanium Black, 256GB)",
+    "title_b": "Samsung Galaxy S24 Ultra 256GB Titanium Black",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same variant"
+  },
+  {
+    "id": "pair-pos-015",
+    "title_a": "Samsung Galaxy S24 5G (Onyx Black, 128GB)",
+    "title_b": "Samsung Galaxy S24 128GB Onyx Black",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same phone"
+  },
+  {
+    "id": "pair-pos-016",
+    "title_a": "Samsung Galaxy S24+ 5G (Cobalt Violet, 256GB)",
+    "title_b": "Samsung Galaxy S24 Plus 256GB Cobalt Violet",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Plus vs + notation"
+  },
+  {
+    "id": "pair-pos-017",
+    "title_a": "Samsung Galaxy A55 5G (Awesome Navy, 128GB)",
+    "title_b": "Samsung Galaxy A55 128GB Awesome Navy",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same phone"
+  },
+  {
+    "id": "pair-pos-018",
+    "title_a": "Samsung Galaxy M34 5G (Prism Silver, 128GB)",
+    "title_b": "Samsung Galaxy M34 5G 128GB Prism Silver",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same phone"
+  },
+  {
+    "id": "pair-pos-019",
+    "title_a": "OnePlus 12 5G (Silky Black, 256GB)",
+    "title_b": "OnePlus 12 Silky Black 256GB Smartphone",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same flagship"
+  },
+  {
+    "id": "pair-pos-020",
+    "title_a": "OnePlus 12 5G (Flowy Emerald, 512GB)",
+    "title_b": "OnePlus 12 512GB Flowy Emerald",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same flagship"
+  },
+  {
+    "id": "pair-pos-021",
+    "title_a": "OnePlus 12R 5G (Cool Blue, 128GB)",
+    "title_b": "OnePlus 12R 128GB Cool Blue",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same phone"
+  },
+  {
+    "id": "pair-pos-022",
+    "title_a": "OnePlus Nord CE 4 5G (Dark Chrome, 128GB)",
+    "title_b": "OnePlus Nord CE4 128GB Dark Chrome",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "CE 4 vs CE4"
+  },
+  {
+    "id": "pair-pos-023",
+    "title_a": "OnePlus Open (Emerald Dusk, 512GB)",
+    "title_b": "OnePlus Open 512GB Emerald Dusk Foldable",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same phone"
+  },
+  {
+    "id": "pair-pos-024",
+    "title_a": "Xiaomi 14 (Black, 512GB)",
+    "title_b": "Xiaomi 14 512GB Black Leica Optics",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Promo tag addition"
+  },
+  {
+    "id": "pair-pos-025",
+    "title_a": "Redmi Note 13 Pro+ 5G (Fusion Black, 256GB)",
+    "title_b": "Redmi Note 13 Pro Plus 5G 256GB Fusion Black",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Plus vs +"
+  },
+  {
+    "id": "pair-pos-026",
+    "title_a": "Redmi Note 13 Pro 5G (Midnight Black, 128GB)",
+    "title_b": "Redmi Note 13 Pro 128GB Midnight Black",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-027",
+    "title_a": "Redmi 13C 5G (Starlight Black, 128GB)",
+    "title_b": "Redmi 13C 5G 128GB Starlight Black",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-028",
+    "title_a": "Vivo V30 Pro 5G (Andaman Blue, 512GB)",
+    "title_b": "Vivo V30 Pro 512GB Andaman Blue",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-029",
+    "title_a": "Vivo T3 5G (Cosmic Blue, 128GB)",
+    "title_b": "Vivo T3 5G 128GB Cosmic Blue",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-030",
+    "title_a": "Oppo Reno 11 Pro 5G (Pearl White, 256GB)",
+    "title_b": "Oppo Reno 11 Pro 256GB Pearl White",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-031",
+    "title_a": "Motorola Edge 50 Pro 5G (Black Beauty, 256GB)",
+    "title_b": "Motorola Edge 50 Pro 256GB Black Beauty",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-032",
+    "title_a": "Moto G84 5G (Marshmallow Blue, 256GB)",
+    "title_b": "Motorola Moto G84 5G 256GB Marshmallow Blue",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Moto vs Motorola"
+  },
+  {
+    "id": "pair-pos-033",
+    "title_a": "Poco X6 Pro 5G (Spectre Black, 256GB)",
+    "title_b": "Poco X6 Pro 256GB Spectre Black",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-034",
+    "title_a": "Poco F6 5G (Titanium, 256GB)",
+    "title_b": "Poco F6 5G 256GB Titanium",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-035",
+    "title_a": "iQOO 12 5G (Legend White, 256GB)",
+    "title_b": "iQOO 12 256GB Legend White",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-036",
+    "title_a": "iQOO Neo 9 Pro 5G (Fiery Red, 256GB)",
+    "title_b": "iQOO Neo 9 Pro 256GB Fiery Red",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same model"
+  },
+  {
+    "id": "pair-pos-037",
+    "title_a": "Apple MacBook Air M2 Chip (13.6-inch 8GB 256GB)",
+    "title_b": "Apple MacBook Air M2 13.6-inch 8GB/256GB",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same laptop"
+  },
+  {
+    "id": "pair-pos-038",
+    "title_a": "Apple MacBook Air M3 Chip (15.3-inch 16GB 512GB)",
+    "title_b": "Apple MacBook Air 15.3 M3 16GB 512GB",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same laptop"
+  },
+  {
+    "id": "pair-pos-039",
+    "title_a": "Dell XPS 13 9315 Laptop (Intel i7 16GB 512GB)",
+    "title_b": "Dell XPS 13 9315 i7-1250U 16GB 512GB SSD",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Processor tag variance"
+  },
+  {
+    "id": "pair-pos-040",
+    "title_a": "HP Pavilion 15 Laptop (AMD Ryzen 5 16GB 512GB)",
+    "title_b": "HP Pavilion 15 Ryzen 5 16GB 512GB",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same laptop"
+  },
+  {
+    "id": "pair-pos-041",
+    "title_a": "Lenovo IdeaPad Slim 3 (Intel Core i5 16GB 512GB)",
+    "title_b": "Lenovo IdeaPad Slim 3 i5 16GB 512GB",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same laptop"
+  },
+  {
+    "id": "pair-pos-042",
+    "title_a": "Sony Bravia 55 inch 4K Ultra HD Smart Google TV",
+    "title_b": "Sony Bravia 55 inch 4K Smart TV",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same television"
+  },
+  {
+    "id": "pair-pos-043",
+    "title_a": "LG 55 inch 4K Ultra HD Smart OLED TV",
+    "title_b": "LG 55 inch OLED 4K Smart TV",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same television"
+  },
+  {
+    "id": "pair-pos-044",
+    "title_a": "Samsung 65 inch Crystal 4K Vivid Pro Smart TV",
+    "title_b": "Samsung 65 inch Crystal 4K Smart TV",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Same television"
+  },
+  {
+    "id": "pair-pos-045",
+    "title_a": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones",
+    "title_b": "Sony WH-1000XM5 ANC Wireless Headphones",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Noise cancelling vs ANC"
+  },
+  {
+    "id": "pair-pos-046",
+    "title_a": "Apple AirPods Pro (2nd Generation) with MagSafe Case",
+    "title_b": "Apple AirPods Pro 2nd Gen USB-C MagSafe",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Generation wording"
+  },
+  {
+    "id": "pair-pos-047",
+    "title_a": "boAt Airdopes 141 Bluetooth TWS Earbuds",
+    "title_b": "boAt Airdopes 141 Truly Wireless Earbuds",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "TWS vs Truly Wireless"
+  },
+  {
+    "id": "pair-pos-048",
+    "title_a": "Atomberg Renesa 1200mm BLDC Ceiling Fan with Remote",
+    "title_b": "Atomberg Renesa BLDC Motor 1200mm Ceiling Fan",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Spec phrasing"
+  },
+  {
+    "id": "pair-pos-049",
+    "title_a": "Borosil Glass Mixing Bowl Set of 3",
+    "title_b": "Borosil Mixing Bowl Set of 3 Glass",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Word order"
+  },
+  {
+    "id": "pair-pos-050",
+    "title_a": "Atomic Habits by James Clear Paperback",
+    "title_b": "Atomic Habits - James Clear (Paperback)",
+    "label": 1,
+    "type": "POSITIVE",
+    "description": "Book title punctuation"
+  },
+  {
+    "id": "pair-neg-001",
+    "title_a": "Realme 12 Pro 5G (128GB)",
+    "title_b": "Realme 12 Pro 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Storage mismatch (128GB vs 256GB)"
+  },
+  {
+    "id": "pair-neg-002",
+    "title_a": "Realme 12 Pro 5G (Submarine Blue 128GB)",
+    "title_b": "Realme 12 Pro+ 5G (Submarine Blue 128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Sub-model difference (12 Pro vs 12 Pro+)"
+  },
+  {
+    "id": "pair-neg-003",
+    "title_a": "Realme 12 Pro+ 5G (128GB)",
+    "title_b": "Realme 12 Pro+ 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Storage mismatch (128GB vs 256GB)"
+  },
+  {
+    "id": "pair-neg-004",
+    "title_a": "Realme Narzo 60 5G (128GB)",
+    "title_b": "Realme Narzo 60x 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Model difference (Narzo 60 vs 60x)"
+  },
+  {
+    "id": "pair-neg-005",
+    "title_a": "Realme GT Neo 3 (256GB)",
+    "title_b": "Realme GT 6T (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Different generation (GT Neo 3 vs GT 6T)"
+  },
+  {
+    "id": "pair-neg-006",
+    "title_a": "Realme C53 (64GB)",
+    "title_b": "Realme C55 (64GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Different model (C53 vs C55)"
+  },
+  {
+    "id": "pair-neg-007",
+    "title_a": "Realme P1 5G (128GB)",
+    "title_b": "Realme P1 Pro 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Base vs Pro (P1 vs P1 Pro)"
+  },
+  {
+    "id": "pair-neg-008",
+    "title_a": "Apple iPhone 15 (128 GB) - Black",
+    "title_b": "Apple iPhone 14 (128 GB) - Black",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (iPhone 15 vs 14)"
+  },
+  {
+    "id": "pair-neg-009",
+    "title_a": "Apple iPhone 15 (128 GB) - Black",
+    "title_b": "Apple iPhone 15 (256 GB) - Black",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Storage mismatch (128GB vs 256GB)"
+  },
+  {
+    "id": "pair-neg-010",
+    "title_a": "Apple iPhone 15 (128 GB) - Black",
+    "title_b": "Apple iPhone 15 Plus (128 GB) - Black",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Model mismatch (iPhone 15 vs 15 Plus)"
+  },
+  {
+    "id": "pair-neg-011",
+    "title_a": "Apple iPhone 15 Pro (128 GB)",
+    "title_b": "Apple iPhone 15 Pro Max (256 GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Pro vs Pro Max"
+  },
+  {
+    "id": "pair-neg-012",
+    "title_a": "Samsung Galaxy S24 5G (128GB)",
+    "title_b": "Samsung Galaxy S23 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (S24 vs S23)"
+  },
+  {
+    "id": "pair-neg-013",
+    "title_a": "Samsung Galaxy S24 5G (128GB)",
+    "title_b": "Samsung Galaxy S24 Ultra 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Base vs Ultra model"
+  },
+  {
+    "id": "pair-neg-014",
+    "title_a": "Samsung Galaxy S24 Ultra 5G (256GB)",
+    "title_b": "Samsung Galaxy S24 Ultra 5G (512GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Storage mismatch (256GB vs 512GB)"
+  },
+  {
+    "id": "pair-neg-015",
+    "title_a": "Samsung Galaxy A55 5G (128GB)",
+    "title_b": "Samsung Galaxy A35 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Series difference (A55 vs A35)"
+  },
+  {
+    "id": "pair-neg-016",
+    "title_a": "Samsung Galaxy M34 5G (128GB)",
+    "title_b": "Samsung Galaxy M14 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Series difference (M34 vs M14)"
+  },
+  {
+    "id": "pair-neg-017",
+    "title_a": "OnePlus 12 5G (256GB)",
+    "title_b": "OnePlus 11 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (OnePlus 12 vs 11)"
+  },
+  {
+    "id": "pair-neg-018",
+    "title_a": "OnePlus 12 5G (256GB)",
+    "title_b": "OnePlus 12R 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Flagship vs R variant"
+  },
+  {
+    "id": "pair-neg-019",
+    "title_a": "OnePlus 12 5G (256GB)",
+    "title_b": "OnePlus 12 5G (512GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Storage mismatch (256GB vs 512GB)"
+  },
+  {
+    "id": "pair-neg-020",
+    "title_a": "OnePlus Nord CE 4 (128GB)",
+    "title_b": "OnePlus Nord CE 3 (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (CE 4 vs CE 3)"
+  },
+  {
+    "id": "pair-neg-021",
+    "title_a": "Xiaomi 14 (512GB)",
+    "title_b": "Xiaomi 13 Pro (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (Xiaomi 14 vs 13)"
+  },
+  {
+    "id": "pair-neg-022",
+    "title_a": "Redmi Note 13 Pro (128GB)",
+    "title_b": "Redmi Note 13 Pro+ (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Base Pro vs Pro+ and storage"
+  },
+  {
+    "id": "pair-neg-023",
+    "title_a": "Redmi Note 13 5G (128GB)",
+    "title_b": "Redmi 13C 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Series difference (Note vs C)"
+  },
+  {
+    "id": "pair-neg-024",
+    "title_a": "Vivo V30 Pro 5G (256GB)",
+    "title_b": "Vivo V29 Pro 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (V30 vs V29)"
+  },
+  {
+    "id": "pair-neg-025",
+    "title_a": "Vivo T3 5G (128GB)",
+    "title_b": "Vivo T2 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (T3 vs T2)"
+  },
+  {
+    "id": "pair-neg-026",
+    "title_a": "Oppo Reno 11 Pro (256GB)",
+    "title_b": "Oppo Reno 10 Pro (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (Reno 11 vs 10)"
+  },
+  {
+    "id": "pair-neg-027",
+    "title_a": "Motorola Edge 50 Pro (256GB)",
+    "title_b": "Motorola Edge 40 Neo (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Model difference (Edge 50 Pro vs 40 Neo)"
+  },
+  {
+    "id": "pair-neg-028",
+    "title_a": "Moto G84 5G (256GB)",
+    "title_b": "Moto G54 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Model difference (G84 vs G54)"
+  },
+  {
+    "id": "pair-neg-029",
+    "title_a": "Poco X6 Pro 5G (256GB)",
+    "title_b": "Poco X6 5G (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Pro vs Non-Pro"
+  },
+  {
+    "id": "pair-neg-030",
+    "title_a": "Poco F6 5G (256GB)",
+    "title_b": "Poco F5 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (F6 vs F5)"
+  },
+  {
+    "id": "pair-neg-031",
+    "title_a": "iQOO 12 5G (256GB)",
+    "title_b": "iQOO 11 5G (256GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (12 vs 11)"
+  },
+  {
+    "id": "pair-neg-032",
+    "title_a": "iQOO Neo 9 Pro (256GB)",
+    "title_b": "iQOO Neo 7 Pro (128GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (Neo 9 vs 7)"
+  },
+  {
+    "id": "pair-neg-033",
+    "title_a": "Apple MacBook Air M2 (13.6-inch)",
+    "title_b": "Apple MacBook Air M3 (13.6-inch)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Processor mismatch (M2 vs M3)"
+  },
+  {
+    "id": "pair-neg-034",
+    "title_a": "Apple MacBook Air M2 (13.6-inch 256GB)",
+    "title_b": "Apple MacBook Air M2 (13.6-inch 512GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Storage mismatch (256GB vs 512GB)"
+  },
+  {
+    "id": "pair-neg-035",
+    "title_a": "Apple MacBook Air M2 (13.6-inch)",
+    "title_b": "Apple MacBook Pro M2 (14.2-inch)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Air vs Pro laptop"
+  },
+  {
+    "id": "pair-neg-036",
+    "title_a": "Dell XPS 13 9315 (16GB 512GB)",
+    "title_b": "Dell Inspiron 15 3520 (8GB 512GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Series difference (XPS vs Inspiron)"
+  },
+  {
+    "id": "pair-neg-037",
+    "title_a": "HP Pavilion 15 (16GB 512GB)",
+    "title_b": "HP Envy x360 (16GB 512GB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Series difference (Pavilion vs Envy)"
+  },
+  {
+    "id": "pair-neg-038",
+    "title_a": "Lenovo IdeaPad Slim 3 (512GB)",
+    "title_b": "Lenovo Legion Pro 5 (1TB)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Product line difference (IdeaPad vs Legion)"
+  },
+  {
+    "id": "pair-neg-039",
+    "title_a": "Sony Bravia 55 inch 4K TV",
+    "title_b": "Sony Bravia 65 inch 4K TV",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Size mismatch (55 inch vs 65 inch)"
+  },
+  {
+    "id": "pair-neg-040",
+    "title_a": "LG 55 inch OLED 4K Smart TV",
+    "title_b": "LG 55 inch QNED 4K Smart TV",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Display technology (OLED vs QNED)"
+  },
+  {
+    "id": "pair-neg-041",
+    "title_a": "Samsung 55 inch Crystal 4K TV",
+    "title_b": "Samsung 65 inch Crystal 4K TV",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Size mismatch (55 inch vs 65 inch)"
+  },
+  {
+    "id": "pair-neg-042",
+    "title_a": "Sony WH-1000XM5 Wireless Headphones",
+    "title_b": "Sony WH-1000XM4 Wireless Headphones",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Generation mismatch (XM5 vs XM4)"
+  },
+  {
+    "id": "pair-neg-043",
+    "title_a": "Apple AirPods Pro (2nd Gen)",
+    "title_b": "Apple AirPods (3rd Gen)",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Pro vs Standard AirPods"
+  },
+  {
+    "id": "pair-neg-044",
+    "title_a": "boAt Airdopes 141 TWS Earbuds",
+    "title_b": "boAt Airdopes 131 TWS Earbuds",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Model difference (141 vs 131)"
+  },
+  {
+    "id": "pair-neg-045",
+    "title_a": "Atomberg Renesa 1200mm Ceiling Fan",
+    "title_b": "Atomberg Renesa 900mm Ceiling Fan",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Size mismatch (1200mm vs 900mm)"
+  },
+  {
+    "id": "pair-neg-046",
+    "title_a": "Apple iPhone 15 128GB Black",
+    "title_b": "Samsung Galaxy S24 128GB Black",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Brand mismatch (Apple vs Samsung)"
+  },
+  {
+    "id": "pair-neg-047",
+    "title_a": "Realme 12 Pro 5G 128GB",
+    "title_b": "Redmi Note 13 Pro 128GB",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Brand mismatch (Realme vs Redmi)"
+  },
+  {
+    "id": "pair-neg-048",
+    "title_a": "Dell XPS 13 16GB 512GB",
+    "title_b": "HP Pavilion 15 16GB 512GB",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Brand mismatch (Dell vs HP)"
+  },
+  {
+    "id": "pair-neg-049",
+    "title_a": "Sony Bravia 55 inch 4K TV",
+    "title_b": "Samsung 55 inch Crystal 4K TV",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Brand mismatch (Sony vs Samsung)"
+  },
+  {
+    "id": "pair-neg-050",
+    "title_a": "Sony WH-1000XM5 Headphones",
+    "title_b": "Bose QuietComfort 45 Headphones",
+    "label": 0,
+    "type": "NEGATIVE",
+    "description": "Brand mismatch (Sony vs Bose)"
+  }
+]

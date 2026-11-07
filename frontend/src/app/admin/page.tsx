@@ -18,7 +18,20 @@ import {
   Activity,
   ArrowLeft,
   FileText,
+  GitPullRequest,
 } from "lucide-react";
+
+interface ReviewQueueItem {
+  id: string;
+  title_a: string;
+  title_b: string;
+  brand: string;
+  confidence_score: number;
+  stage: string;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  created_at: string;
+}
 
 interface StoreItem {
   name: string;
@@ -57,6 +70,12 @@ export default function AdminPage() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [connectors, setConnectors] = useState<ConnectorItem[]>([]);
   const [scheduler, setScheduler] = useState<SchedulerStats | null>(null);
+  const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
+  const [reviewActionMsg, setReviewActionMsg] = useState<string | null>(null);
+  const [evalPairA, setEvalPairA] = useState("Realme 12 Pro+ 5G 256GB");
+  const [evalPairB, setEvalPairB] = useState("Realme 12 Pro 5G 256GB");
+  const [evalResult, setEvalResult] = useState<any>(null);
+  const [evaluating, setEvaluating] = useState(false);
   const [feedInput, setFeedInput] = useState<string>("");
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -68,15 +87,17 @@ export default function AdminPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [storesRes, syncRes, schedRes] = await Promise.all([
+      const [storesRes, syncRes, schedRes, queueRes] = await Promise.all([
         fetch(`${API_BASE}/api/admin/stores`).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/sync-status`).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/scheduler`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/review-queue`).then((r) => (r.ok ? r.json() : null)),
       ]);
 
       if (storesRes?.stores) setStores(storesRes.stores);
       if (syncRes?.connectors) setConnectors(syncRes.connectors);
       if (schedRes) setScheduler(schedRes);
+      if (queueRes?.queue) setReviewQueue(queueRes.queue);
     } catch (err) {
       console.error("Error fetching admin telemetry:", err);
     } finally {
@@ -162,6 +183,43 @@ export default function AdminPage() {
     }
   };
 
+  const handleReviewAction = async (itemId: string, action: "approve" | "reject") => {
+    try {
+      setReviewActionMsg(`Processing review action for ${itemId}...`);
+      const res = await fetch(`${API_BASE}/api/admin/review-queue/${itemId}/${action}`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReviewActionMsg(`Match item ${itemId} was marked as ${action.toUpperCase()}D.`);
+        fetchAdminData();
+      } else {
+        setReviewActionMsg(`Failed: ${data.detail || "Server error"}`);
+      }
+    } catch (err: any) {
+      setReviewActionMsg(`Action error: ${err.message}`);
+    }
+  };
+
+  const handleEvaluatePair = async () => {
+    if (!evalPairA.trim() || !evalPairB.trim()) return;
+    setEvaluating(true);
+    setEvalResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/matcher/evaluate-pair`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title_a: evalPairA, title_b: evalPairB }),
+      });
+      const data = await res.json();
+      setEvalResult(data);
+    } catch (err: any) {
+      setEvalResult({ error: err.message });
+    } finally {
+      setEvaluating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       {/* Top Header */}
@@ -183,11 +241,11 @@ export default function AdminPage() {
             <h1 className="text-3xl font-extrabold tracking-tight text-white mt-2 flex items-center gap-2">
               ShopPilot Control Center
               <span className="text-xs px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 font-mono border border-indigo-500/30">
-                Phase C: Real Pipeline
+                Phase D: ML Matching & Review Queue
               </span>
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              Store connector orchestration, feed ingestion, store toggles, and price pipeline scheduler telemetry.
+              Store connectors, merchant feed ingestion, scheduler telemetry, and ML matching candidate review queue.
             </p>
           </div>
 
@@ -461,6 +519,219 @@ export default function AdminPage() {
               </p>
             </div>
           </div>
+        </section>
+
+        {/* Section 5: Candidate Match Review Queue (ML Stage 2 & 3 Guards) */}
+        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl" id="review-queue-section">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <GitPullRequest className="w-5 h-5 text-indigo-400" />
+                <h2 className="text-xl font-bold text-white">
+                  Candidate Match Review Queue (ML Guards)
+                </h2>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-mono">
+                  Order: Barcode → Specs → Embedding
+                </span>
+              </div>
+              <p className="text-sm text-slate-400 mt-1">
+                Candidate pairs with confidence between <span className="text-amber-300 font-mono">0.50</span> and <span className="text-emerald-300 font-mono">0.84</span> are held here instead of merging automatically. (Threshold: <span className="text-emerald-400 font-mono font-bold">≥ 0.85 auto-merge</span>).
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-3 py-1 bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-full font-semibold">
+                {reviewQueue.filter((q) => q.status === "PENDING").length} Pending Verification
+              </span>
+              <span className="text-xs px-3 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-full font-semibold">
+                Total: {reviewQueue.length}
+              </span>
+            </div>
+          </div>
+
+          {reviewActionMsg && (
+            <div className="mb-4 p-3 bg-indigo-950/40 border border-indigo-800/40 rounded-lg text-xs font-medium text-indigo-300 flex items-center justify-between">
+              <span>⚡ {reviewActionMsg}</span>
+              <button onClick={() => setReviewActionMsg(null)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+          )}
+
+          {reviewQueue.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-sm">
+              Review queue is clear. All incoming connector pairs matched with &ge; 0.85 confidence or rejected.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reviewQueue.map((item) => {
+                const confPercent = (item.confidence_score * 100).toFixed(1);
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-lg border transition ${
+                      item.status === "APPROVED"
+                        ? "bg-emerald-950/20 border-emerald-800/40"
+                        : item.status === "REJECTED"
+                        ? "bg-rose-950/20 border-rose-800/40"
+                        : "bg-slate-800/60 border-slate-700/80"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                          {item.id}
+                        </span>
+                        <span className="text-xs uppercase font-bold text-slate-400">
+                          Brand: <span className="text-white">{item.brand}</span>
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">
+                          • Stage: {item.stage}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-bold font-mono border ${
+                            item.confidence_score >= 0.85
+                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                              : item.confidence_score >= 0.70
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                              : "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                          }`}
+                        >
+                          {confPercent}% Match Confidence
+                        </span>
+
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
+                            item.status === "APPROVED"
+                              ? "bg-emerald-500 text-slate-950"
+                              : item.status === "REJECTED"
+                              ? "bg-rose-500 text-white"
+                              : "bg-amber-500 text-slate-950"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3">
+                      <div className="p-3 bg-slate-950/80 rounded border border-slate-800">
+                        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                          Existing Catalog Product (A)
+                        </div>
+                        <div className="font-medium text-slate-100">{item.title_a}</div>
+                      </div>
+                      <div className="p-3 bg-slate-950/80 rounded border border-slate-800">
+                        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                          Incoming Feed Candidate (B)
+                        </div>
+                        <div className="font-medium text-slate-100">{item.title_b}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-700/60">
+                      <p className="text-xs text-amber-300/90 font-mono flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        {item.reason}
+                      </p>
+
+                      {item.status === "PENDING" && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleReviewAction(item.id, "approve")}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold flex items-center gap-1 transition"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Approve & Merge
+                          </button>
+                          <button
+                            onClick={() => handleReviewAction(item.id, "reject")}
+                            className="px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded text-xs font-semibold flex items-center gap-1 transition"
+                          >
+                            <XCircle className="w-3.5 h-3.5" /> Reject Candidate
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Section 6: Live ML Matcher Diagnostic Console */}
+        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl mb-12">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Layers className="w-5 h-5 text-indigo-400" /> Live ML Matcher Diagnostic Tool
+            </h2>
+            <p className="text-sm text-slate-400">
+              Test two arbitrary product titles through the multi-stage matcher to inspect Barcode, Spec Filter, and Dense Embedding similarity decisions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-xs text-slate-400 block mb-1 font-semibold">Title A (Reference Product):</label>
+              <input
+                type="text"
+                value={evalPairA}
+                onChange={(e) => setEvalPairA(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 block mb-1 font-semibold">Title B (Candidate Listing):</label>
+              <input
+                type="text"
+                value={evalPairB}
+                onChange={(e) => setEvalPairB(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              onClick={handleEvaluatePair}
+              disabled={evaluating}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white rounded text-xs font-semibold flex items-center gap-2 transition"
+            >
+              {evaluating ? "Evaluating Pipeline..." : "Run Matcher Diagnostic"}
+            </button>
+            <span className="text-xs text-slate-500">
+              Evaluates barcode match, tier modifier, hardware specs, and vector cosine similarity.
+            </span>
+          </div>
+
+          {evalResult && (
+            <div className="p-4 bg-slate-950 rounded-lg border border-slate-800 font-mono text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2 mb-3">
+                <span className="text-slate-300 font-semibold">
+                  Diagnostic Result: Stage [{evalResult.stage}]
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded font-bold ${
+                    evalResult.status === "AUTO_MERGED"
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                      : evalResult.status === "PENDING_ADMIN_REVIEW"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                      : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                  }`}
+                >
+                  Status: {evalResult.status} ({((evalResult.confidence || 0) * 100).toFixed(1)}% Confidence)
+                </span>
+              </div>
+              <div className="text-slate-300 mb-1">
+                <span className="text-slate-500">Decision Reason: </span>
+                {evalResult.reason}
+              </div>
+              <pre className="text-[11px] text-slate-400 mt-2 overflow-x-auto bg-slate-900/60 p-2 rounded">
+                {JSON.stringify(evalResult, null, 2)}
+              </pre>
+            </div>
+          )}
         </section>
       </div>
     </div>

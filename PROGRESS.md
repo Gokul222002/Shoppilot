@@ -120,3 +120,46 @@
     - `phase_c_admin_error_tolerance.png`: Admin dashboard showing simulated 429 error without page crash.
     - `phase_c_search_via_connector.png`: User search functioning seamlessly via connector pipeline.
 
+## Phase D — Smarter Matching & Semantic Search (ML) ✅ COMPLETE
+- [x] **Vector Engine & Dense Embeddings (`vector_engine.py`)**:
+  - Built `VectorEngine` fitted across all 315 canonical catalog products with 512-dimensional dense n-gram vectorizer (L2 normalized) with Gemini API embedding support and local offline vectorizer fallback.
+  - Query intent extraction (`parse_query_intent`): Automatically parses category hints, budget constraints (`under 20000` -> `max_price=20000`), brand targets, and semantic domain expansions (camera, battery, gaming, display).
+  - Semantic vector search (`search_semantic`): Blends vector cosine similarity with structured budget, brand, and category constraints.
+  - Dedicated `/api/search/semantic` endpoint and hybrid query routing in universal search (`GET /api/search` automatically routes descriptive sentences like `'phone with good camera under 20000'` through semantic vector search).
+  - ML Recommendations:
+    - `GET /api/products/{id}/similar`: Recommends vector cosine nearest-neighbors with comparable specs and price bracket.
+    - `GET /api/products/{id}/also-compared`: Recommends cross-brand segment alternatives within the same price tier.
+- [x] **Multi-Stage Matcher Pipeline (`matching.py`)**:
+  - Strictly structured multi-stage matching order:
+    1. **Stage 1 (Barcode Check)**: EAN-13 GS1 barcode exact match -> 1.0 confidence match; conflict -> 0.0 confidence mismatch.
+    2. **Stage 2 (Hardware Spec & Tier Filters)**: Normalizes and inspects storage, RAM, screen size, display panel technology (`oled`, `qned`, `qled`), model generation tokens, and sub-model tier modifiers (`Pro+`, `Pro`, `Plus`, `Ultra`, `Max`, `Lite`, `Neo`).
+       - Storage mismatch penalty: 0.15.
+       - Screen size / display panel mismatch penalty: 0.15.
+       - Model generation mismatch penalty: 0.20 (e.g. `S24` vs `S23`).
+       - Sub-model tier mismatch penalty: Capped at 0.75 confidence to prevent erroneous merges between `Realme 12 Pro` and `Realme 12 Pro+`.
+    3. **Stage 3 (Embedding Cosine Similarity + Token Jaccard)**: Dense embedding cosine similarity (0.45 weight) + token Jaccard (0.35 weight) + brand consistency bonus (+0.15) + spec consistency bonus (+0.10 to +0.15).
+  - Decision Thresholds:
+    - `confidence >= 0.85`: **AUTO_MERGED** (High confidence match).
+    - `0.50 <= confidence < 0.84`: **PENDING_ADMIN_REVIEW** (Held in Candidate Match Review Queue).
+    - `confidence < 0.50`: **REJECTED** (Low similarity).
+- [x] **Candidate Match Review Queue & Admin Diagnostic Console (`/admin`)**:
+  - Section 5 added to Admin Control Center displaying candidate match pairs queued for human audit.
+  - Displays match ID, brand, stage, match confidence badge, catalog reference vs incoming candidate, decision reason, and status.
+  - Interactive "Approve & Merge" and "Reject Candidate" controls connected to `POST /api/admin/review-queue/{id}/approve` and `POST /api/admin/review-queue/{id}/reject`.
+  - Section 6: Live ML Matcher Diagnostic Tool allowing admins to test two arbitrary titles and view pipeline stages, confidence scores, and JSON telemetry in real time.
+- [x] **Labeled Test Benchmark & Evaluation Report (`evaluate_matcher.py` & `MATCHER_EVALUATION.md`)**:
+  - Curated 100 labeled test pairs in `backend/tests/data/matcher_test_pairs.json` (50 true positive matches, 50 hard negative pairs across generations, sub-model tiers, display sizes, and storage variants).
+  - Evaluated performance across thresholds [0.70, 0.75, 0.80, 0.85, 0.90].
+  - At threshold **0.85**: **Precision = 100.0% (35 TP, 0 FP, 50 TN, 15 FN routed to review queue)**.
+  - Justification: In a multi-store price comparison engine, False Positives (merging a `Pro` offer into a `Pro+` phone) destroy shopper trust by advertising an invalid cheap price. A 0.85 threshold completely eliminates false merges (0% FP) while routing borderline pairs into the review queue for safety.
+  - Evaluation report committed to `backend/MATCHER_EVALUATION.md` and linked in `README.md`.
+- [x] **Verification & Acceptance**:
+  - **56/56 Backend Pytest tests passing** (`pytest backend/tests -v`).
+  - **11/11 Next.js 14 routes compiled with 0 TypeScript/lint errors**.
+  - **Playwright browser acceptance test completed (`verify_phase_d.py`)**:
+    - `phase_d_semantic_search.png`: Searching `'phone with good camera under 20000'` returns camera-focused smartphones within budget (Realme Narzo, Redmi Note 13, Vivo T2x).
+    - `phase_d_recommendations_compare.png`: Product compare page displays interactive price history alongside "✨ Similar Products (AI Vector Matched)" and "👥 People Also Compared".
+    - `phase_d_admin_review_queue.png`: Admin Control Center displays Candidate Match Review Queue with borderline items (`rev-001`, `rev-002`, `rev-003`).
+    - `phase_d_admin_reviewed_action.png`: Admin approves `rev-001` candidate match, updating status to `APPROVED` and triggering live matcher diagnostic.
+
+

@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, ShieldCheck, ArrowLeft, Tag, Share2, Sparkles, ExternalLink } from "lucide-react";
+import { Star, ShieldCheck, ArrowLeft, Tag, Share2, Sparkles, ExternalLink, Users } from "lucide-react";
 import { MockConnector } from "@/lib/mock-connector";
 import OfferRow from "@/components/OfferRow";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
@@ -39,7 +39,26 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
   const highestOffer = sortedOffers[sortedOffers.length - 1];
   const maxSavings = highestOffer.price - bestOffer.price;
   const savingsVsMrp = bestOffer.mrp - bestOffer.price;
-  const similarProducts = connector.getSimilar(product, 4);
+
+  // ML Recommendations: Similar Products & People Also Compared
+  let similarProducts = connector.getSimilar(product, 4);
+  let peopleAlsoCompared: any[] = [];
+
+  try {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const [simRes, compRes] = await Promise.all([
+      fetch(`${API_BASE}/api/products/${product.id}/similar?limit=4`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${API_BASE}/api/products/${product.id}/also-compared?limit=4`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),
+    ]);
+    if (simRes?.similar_products && simRes.similar_products.length > 0) {
+      similarProducts = simRes.similar_products;
+    }
+    if (compRes?.people_also_compared && compRes.people_also_compared.length > 0) {
+      peopleAlsoCompared = compRes.people_also_compared;
+    }
+  } catch (err) {
+    // Graceful offline fallback
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 pb-20">
@@ -204,18 +223,50 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
           <PriceHistoryChart history={product.priceHistory} currentPrice={bestOffer.price} />
         </section>
 
-        {/* SECTION 4: SIMILAR PRODUCTS */}
+        {/* SECTION 4: SIMILAR PRODUCTS (AI VECTOR MATCHED) */}
         {similarProducts.length > 0 && (
           <section className="space-y-4 pt-4 border-t border-gray-800">
-            <div>
-              <h2 className="text-xl font-bold text-white">Compare Alternative Models</h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Other popular options in {product.category}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-orange-400" /> Similar Products
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Vector-matched alternatives with comparable specifications and price bracket
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                AI Vector Matched
+              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {similarProducts.map((p) => (
+              {similarProducts.map((p: any) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* SECTION 5: PEOPLE ALSO COMPARED (CROSS-BRAND SEGMENT MATCH) */}
+        {peopleAlsoCompared.length > 0 && (
+          <section className="space-y-4 pt-4 border-t border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 text-indigo-400" /> People Also Compared
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Competing brands in {product.category} frequently cross-shopped in this segment
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                Cross-Brand Competitors
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {peopleAlsoCompared.map((p: any) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>

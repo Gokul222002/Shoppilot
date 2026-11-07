@@ -30,6 +30,8 @@ from app.connectors.registry import connector_registry
 from app.connectors.scheduler import price_scheduler
 from app.connectors.affiliate import affiliate_builder
 from app.connectors.utils import convert_price
+from app.ml.vector_engine import vector_engine
+from app.matching import product_matcher
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("ShopPilot.Main")
@@ -204,6 +206,7 @@ received_webhooks: List[Dict[str, Any]] = []
 
 # ─── Existing Endpoints ───────────────────────────────────────────────────────
 
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
     return {
@@ -276,13 +279,35 @@ async def search_products(
     in_stock_only: Optional[bool] = Query(default=None, description="In-stock only"),
     sort_by: str = Query(default="", description="Sort: price_asc | price_desc | rating | discount"),
     limit: int = Query(default=40, le=100, description="Max results"),
+    mode: str = Query(default="hybrid", description="Search mode: hybrid | fuzzy | semantic"),
 ):
     """
-    Search products for price comparison with typo tolerance.
-    Returns matching products with offers from multiple stores.
-    Users click through to the store to complete their purchase.
+    Search products for price comparison with hybrid semantic & typo tolerance.
+    Supports descriptive sentence queries ('phone with good camera under 20000')
+    as well as barcode lookups and typo resilience ('relme', 'iphon 15').
     """
     connector = connector_registry.get_active_connector()
+    is_descriptive_sentence = (
+        len(q.split()) >= 3 and any(w in q.lower() for w in ("under", "with", "good", "best", "cheap", "below", "camera", "battery", "gaming"))
+    )
+
+    if mode == "semantic" or (mode == "hybrid" and is_descriptive_sentence):
+        semantic_res = vector_engine.search_semantic(
+            query=q,
+            category=category if category else None,
+            brand=brand if brand else None,
+            min_price=min_price,
+            max_price=max_price,
+            limit=limit,
+        )
+        if semantic_res:
+            return {
+                "query": q,
+                "connector": f"{connector.name} (VectorEngine Semantic)",
+                "total": len(semantic_res),
+                "results": semantic_res[:limit],
+            }
+
     results = connector.search(
         query=q,
         category=category if category else None,
@@ -299,6 +324,33 @@ async def search_products(
         "connector": connector.name,
         "total": len(results),
         "results": results[:limit],
+    }
+
+
+@app.get("/api/search/semantic")
+async def semantic_search_products(
+    q: str = Query(..., description="Descriptive search query e.g. 'phone with good camera under 20000'"),
+    category: Optional[str] = Query(default=None),
+    brand: Optional[str] = Query(default=None),
+    min_price: Optional[int] = Query(default=None),
+    max_price: Optional[int] = Query(default=None),
+    limit: int = Query(default=20, le=50),
+):
+    """Explicit natural language semantic vector search with intent extraction."""
+    intent = vector_engine.parse_query_intent(q)
+    results = vector_engine.search_semantic(
+        query=q,
+        category=category,
+        brand=brand,
+        min_price=min_price,
+        max_price=max_price,
+        limit=limit,
+    )
+    return {
+        "query": q,
+        "intent": intent,
+        "total": len(results),
+        "results": results,
     }
 
 
@@ -365,6 +417,28 @@ async def get_product(
         p_dict["mrp_converted"] = convert_price(p_dict.get("mrp", 0), currency)
 
     return p_dict
+
+
+@app.get("/api/products/{product_id}/similar")
+async def get_similar_products(product_id: str, limit: int = Query(default=4, le=12)):
+    """ML Vector-matched similar products in the same category & price bracket."""
+    similar = vector_engine.get_similar_products(product_id=product_id, limit=limit)
+    return {
+        "product_id": product_id,
+        "count": len(similar),
+        "similar_products": similar,
+    }
+
+
+@app.get("/api/products/{product_id}/also-compared")
+async def get_people_also_compared(product_id: str, limit: int = Query(default=4, le=12)):
+    """Cross-brand alternative products shoppers frequently compare in this segment."""
+    compared = vector_engine.get_people_also_compared(product_id=product_id, limit=limit)
+    return {
+        "product_id": product_id,
+        "count": len(compared),
+        "people_also_compared": compared,
+    }
 
 
 # ─── Admin Control Center Endpoints (Phase C) ────────────────────────────────
@@ -499,6 +573,52 @@ async def log_affiliate_click(payload: LogClickRequest):
 async def get_affiliate_clicks():
     """Retrieve logged outbound affiliate clicks."""
     return {"total_clicks": len(click_logs), "clicks": click_logs[-50:]}
+
+
+# ─── Matcher Diagnostics & Admin Review Queue (Phase D) ─────────────────────
+
+class EvaluateMatchPairRequest(BaseModel):
+    title_a: str
+    title_b: str
+    barcode_a: Optional[str] = None
+    barcode_b: Optional[str] = None
+
+@app.get("/api/admin/review-queue")
+async def get_admin_review_queue(status: Optional[str] = None):
+    """List candidate match pairs queued for admin verification."""
+    queue = product_matcher.get_review_queue(status=status)
+    return {
+        "total": len(queue),
+        "pending_count": len([q for q in queue if q["status"] == "PENDING"]),
+        "queue": queue,
+    }
+
+@app.post("/api/admin/review-queue/{review_id}/approve")
+async def approve_review_queue_item(review_id: str):
+    """Approve candidate match and merge into canonical product."""
+    item = product_matcher.review_item(review_id, "APPROVED")
+    if not item:
+        raise HTTPException(status_code=404, detail="Review item not found")
+    return {"status": "SUCCESS", "action": "APPROVED", "item": item}
+
+@app.post("/api/admin/review-queue/{review_id}/reject")
+async def reject_review_queue_item(review_id: str):
+    """Reject candidate match from merging."""
+    item = product_matcher.review_item(review_id, "REJECTED")
+    if not item:
+        raise HTTPException(status_code=404, detail="Review item not found")
+    return {"status": "SUCCESS", "action": "REJECTED", "item": item}
+
+@app.post("/api/admin/matcher/evaluate-pair")
+async def evaluate_matcher_pair(payload: EvaluateMatchPairRequest):
+    """Diagnose multi-stage matcher confidence and stage decision for two product listings."""
+    res = product_matcher.match(
+        title_a=payload.title_a,
+        title_b=payload.title_b,
+        barcode_a=payload.barcode_a,
+        barcode_b=payload.barcode_b,
+    )
+    return res
 
 
 # ─── Price-Drop Alerts System ─────────────────────────────────────────────────
