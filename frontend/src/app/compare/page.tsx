@@ -17,6 +17,7 @@ import {
   Zap,
   Calendar,
   AlertTriangle,
+  Layers,
 } from "lucide-react";
 import { MockConnector } from "@/lib/mock-connector";
 import OfferRow from "@/components/OfferRow";
@@ -24,6 +25,7 @@ import PriceHistoryChart from "@/components/PriceHistoryChart";
 import ProductCard from "@/components/ProductCard";
 import SearchBar from "@/components/SearchBar";
 import CompareAlertButton from "@/components/CompareAlertButton";
+import BrandedProductPlaceholder from "@/components/BrandedProductPlaceholder";
 
 const connector = new MockConnector();
 
@@ -174,17 +176,26 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
         {/* SECTION 1: PRODUCT HERO */}
         <section className="bg-gray-900 border border-gray-800 rounded-3xl p-6 lg:p-8 shadow-2xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Product Image */}
+            {/* Product Image / Branded Placeholder (Fixes Defect D1) */}
             <div className="lg:col-span-5 relative aspect-square max-w-md mx-auto w-full bg-gray-950 rounded-2xl overflow-hidden border border-gray-800">
-              <Image
-                src={product.imageUrl}
-                alt={product.name}
-                fill
-                sizes="(max-width: 1024px) 100vw, 40vw"
-                className="object-cover"
-                priority
-                unoptimized
-              />
+              {!product.imageUrl || product.imageSource === "placeholder" || !product.imageVerified ? (
+                <BrandedProductPlaceholder
+                  brand={product.brand}
+                  name={product.name}
+                  category={product.category}
+                  size="lg"
+                />
+              ) : (
+                <Image
+                  src={product.imageUrl}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 40vw"
+                  className="object-cover"
+                  priority
+                  unoptimized
+                />
+              )}
               <div className="absolute top-3 left-3 bg-gray-950/80 backdrop-blur-md border border-gray-700/60 text-orange-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                 {product.brand}
               </div>
@@ -208,6 +219,52 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
                   {product.name}
                 </h1>
               </div>
+
+              {/* Interactive Product Family Variant Selector (Workstream 2) */}
+              {product.variants && product.variants.length > 1 && (
+                <div className="flex flex-col gap-2 p-3 bg-gray-950/80 border border-gray-800 rounded-2xl">
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span className="font-semibold text-gray-200 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-orange-400" />
+                      {product.familyName || product.brand} Variants:
+                    </span>
+                    <span className="text-[11px] text-gray-400">
+                      {product.variants.length} configurations
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {product.variants.map((v) => {
+                      const isSelected = v.id === product.id;
+                      const label =
+                        [v.storage, v.ram, v.color].filter(Boolean).join(" · ") || v.name;
+                      return (
+                        <Link
+                          key={v.id}
+                          href={`/compare?q=${encodeURIComponent(v.slug)}`}
+                          className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-2 transition-all duration-150 ${
+                            isSelected
+                              ? "bg-orange-500 text-white font-bold border-orange-400 shadow-md shadow-orange-500/20"
+                              : "bg-gray-900 text-gray-300 border-gray-700 hover:border-gray-600 hover:bg-gray-800"
+                          }`}
+                        >
+                          <span>{label}</span>
+                          {v.bestPrice && (
+                            <span
+                              className={
+                                isSelected
+                                  ? "text-orange-100 text-[10px]"
+                                  : "text-emerald-400 text-[10px] font-mono"
+                              }
+                            >
+                              ₹{v.bestPrice.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Tags / Specs */}
               {product.tags && product.tags.length > 0 && (

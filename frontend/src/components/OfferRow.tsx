@@ -87,11 +87,19 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
           : "border-gray-800 hover:border-gray-700"
       } ${conf.borderClass}`}
     >
-      {/* Best Price Tag */}
+      {/* Best Price / Demo Tag */}
       {isBest && (
-        <div className="absolute -top-3 left-4 bg-emerald-500 text-stone-950 text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md shadow-emerald-500/20">
+        <div
+          className={`absolute -top-3 left-4 text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md ${
+            offer.dataSource === "live" || offer.dataSource === "feed"
+              ? "bg-emerald-500 text-stone-950 shadow-emerald-500/20"
+              : "bg-amber-500/90 text-stone-950 shadow-amber-500/20"
+          }`}
+        >
           <ShieldCheck className="w-3 h-3" />
-          Lowest Price
+          {offer.dataSource === "live" || offer.dataSource === "feed"
+            ? "Lowest Price"
+            : "Demo Best Price"}
         </div>
       )}
 
@@ -150,9 +158,21 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
             -{offer.discountPct}%
           </span>
         </div>
-        <span className="text-xs text-gray-400 line-through">
-          MRP: ₹{offer.mrp.toLocaleString("en-IN")}
-        </span>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-xs text-gray-400 line-through">
+            MRP: ₹{offer.mrp.toLocaleString("en-IN")}
+          </span>
+          {(offer.dataSource === "demo" || !offer.dataSource) && (
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              Demo price
+            </span>
+          )}
+          {offer.dataSource === "live" && (
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              Live price
+            </span>
+          )}
+        </div>
         <span className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
           <Clock className="w-2.5 h-2.5" />
           Updated: {offer.lastUpdated}
@@ -164,7 +184,7 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
         <a
           href={clickOutUrl}
           target="_blank"
-          rel="noopener noreferrer"
+          rel="noopener noreferrer sponsored"
           className={`flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-sm transition-all duration-200 shadow-md ${conf.btnClass}`}
         >
           <span>Buy on {conf.shortName}</span>

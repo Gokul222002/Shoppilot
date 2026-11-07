@@ -27,6 +27,39 @@ export interface Offer {
   coupon?: string; // e.g. "Extra ₹500 off via HDFC Bank"
   url: string; // Real store search URL for this product
   lastUpdated: string; // ISO timestamp
+  dataSource?: "live" | "feed" | "community" | "admin" | "estimate" | "demo";
+  isDemo?: boolean;
+  freshness?: string;
+  verified?: boolean;
+}
+
+export interface VariantAttributes {
+  ram?: string;
+  storage?: string;
+  color?: string;
+  modelNumber?: string;
+}
+
+export interface ProductVariantItem {
+  id: string;
+  name: string;
+  slug: string;
+  ram?: string;
+  storage?: string;
+  color?: string;
+  bestPrice?: number;
+}
+
+export interface ProductFamily {
+  id: string;
+  slug: string;
+  brand: string;
+  series?: string;
+  model: string;
+  category: string;
+  priceRange: { min: number; max: number };
+  variants: ProductVariantItem[];
+  defaultVariantId: string;
 }
 
 export interface Product {
@@ -36,12 +69,20 @@ export interface Product {
   category: string;
   slug: string;
   imageUrl: string;
+  imageSource?: "api" | "feed" | "admin" | "placeholder";
+  imageVerified?: boolean;
   rating: number;
   reviewCount: number;
   barcode?: string;
   offers: Offer[];
   priceHistory: PricePoint[];
   tags: string[];
+  familyId?: string;
+  familySlug?: string;
+  familyName?: string;
+  series?: string;
+  variantAttributes?: VariantAttributes;
+  variants?: ProductVariantItem[];
 }
 
 export interface SearchFilters {
@@ -88,6 +129,33 @@ const TYPO_SYNONYMS: Record<string, string> = {
   appliance: "appliances",
 };
 
+const NOISE_WORDS = new Set([
+  "price", "prices", "buy", "online", "best", "cheap", "cost", "costs",
+  "rate", "rates", "deal", "deals", "discount", "offer", "offers", "review"
+]);
+
+function splitLetterDigitJoins(text: string): string {
+  // Protect storage & RAM tokens like 128gb, 12gb, 1tb
+  const stRamMatches: string[] = [];
+  let s = text.replace(/\b(\d+)\s*(gb|tb|mb)(\s+ram)?\b/gi, (match) => {
+    const placeholder = `__STRAM_${stRamMatches.length}__`;
+    stRamMatches.push(match.toLowerCase());
+    return ` ${placeholder} `;
+  });
+
+  // Split letter then digit (e.g. gt6 -> gt 6, s24 -> s 24, c55 -> c 55)
+  s = s.replace(/([a-zA-Z]+)(\d+)/g, "$1 $2");
+  // Split digit then letter (e.g. 24ultra -> 24 ultra, 12pro -> 12 pro)
+  s = s.replace(/(\d+)([a-zA-Z]+)/g, "$1 $2");
+
+  // Restore protected tokens
+  stRamMatches.forEach((orig, idx) => {
+    s = s.replace(`__STRAM_${idx}__`, orig);
+  });
+
+  return s;
+}
+
 function levenshteinDistance(s1: string, s2: string): number {
   if (s1.length < s2.length) return levenshteinDistance(s2, s1);
   if (s2.length === 0) return s1.length;
@@ -128,64 +196,97 @@ function extractQueryFromInput(raw: string): string {
 
 function normalizeTokens(query: string): string[] {
   const parsed = extractQueryFromInput(query);
-  const clean = parsed.toLowerCase().replace(/[^\w\s]/g, " ");
-  return clean
+  const splitted = splitLetterDigitJoins(parsed);
+  const clean = splitted.toLowerCase().replace(/[\(\)\[\]\{\},;:!?\"'_~`|\/\\*+=#@^&<>]/g, " ");
+  const rawTokens = clean
     .split(/\s+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 0)
     .map((t) => TYPO_SYNONYMS[t] || t);
+
+  const meaningful = rawTokens.filter((t) => !NOISE_WORDS.has(t));
+  return meaningful.length > 0 ? meaningful : rawTokens;
 }
 
 function scoreProductMatch(queryTokens: string[], product: Product): number {
   const nameClean = product.name.toLowerCase().replace(/[^\w\s]/g, " ");
   const brandClean = product.brand.toLowerCase();
   const catClean = product.category.toLowerCase();
+  const familyName = (product.familyName || "").toLowerCase();
+  const series = (product.series || "").toLowerCase();
   const tagsClean = product.tags.map((t) => t.toLowerCase());
   const nameTokens = nameClean.split(/\s+/);
+  const familyTokens = familyName.split(/\s+/).filter(Boolean);
 
   let score = 0.0;
 
+  // 1. Exact Family Match Priority (Rankings: exact family match first > same series > same brand)
+  if (familyTokens.length >= 2) {
+    const matchedFamily = familyTokens.filter((t) => queryTokens.includes(t));
+    if (matchedFamily.length === familyTokens.length) {
+      score += 150.0; // Exact family match!
+    } else if (matchedFamily.length >= 2 && matchedFamily.length >= familyTokens.length - 1) {
+      score += 90.0;
+    }
+  }
+
+  const normQueryStr = queryTokens.join(" ");
+  if (familyName && normQueryStr && (familyName.includes(normQueryStr) || normQueryStr.includes(familyName))) {
+    score += 80.0;
+  }
+
+  // 2. Same Series Match Priority
+  if (series && queryTokens.some((t) => t.length > 2 && series.includes(t))) {
+    score += 35.0;
+  }
+
+  // 3. Same Brand Match
+  if (queryTokens.includes(brandClean)) {
+    score += 20.0;
+  }
+
+  // 4. Exact Variant Attributes Match
+  const storage = (product.variantAttributes?.storage || "").toLowerCase();
+  const ram = (product.variantAttributes?.ram || "").toLowerCase();
+  const color = (product.variantAttributes?.color || "").toLowerCase();
+
+  for (const qTok of queryTokens) {
+    if (storage && qTok === storage) score += 25.0;
+    if (ram && (qTok === ram || qTok.includes(ram))) score += 20.0;
+    if (color && color.includes(qTok)) score += 15.0;
+  }
+
+  // 5. General Tokens
   for (const qTok of queryTokens) {
     let matched = false;
-
-    // 1. Exact token in brand, category, or name
-    if (qTok === brandClean) {
-      score += 10.0;
-      matched = true;
-    } else if (qTok === catClean) {
+    if (qTok === catClean) {
       score += 5.0;
       matched = true;
     } else if (nameTokens.includes(qTok)) {
-      score += 4.0;
+      score += 8.0;
       matched = true;
     } else if (tagsClean.some((tag) => tag.includes(qTok))) {
-      score += 3.0;
+      score += 4.0;
       matched = true;
     } else if (nameClean.includes(qTok)) {
-      score += 2.5;
+      score += 3.0;
       matched = true;
     }
 
-    // 2. Typo tolerance with Levenshtein distance
+    // Levenshtein distance check for typos
     if (!matched && qTok.length >= 3) {
-      // Check brand
       const distBrand = levenshteinDistance(qTok, brandClean);
       if (distBrand <= 1) {
-        score += 8.0;
-        matched = true;
-      } else if (distBrand <= 2 && qTok.length >= 5) {
-        score += 5.0;
+        score += 12.0;
         matched = true;
       }
-
-      // Check name tokens
       if (!matched) {
         for (const nTok of nameTokens) {
           if (nTok.length >= 3) {
             const dist = levenshteinDistance(qTok, nTok);
             const maxAllowed = qTok.length <= 5 ? 1 : 2;
             if (dist <= maxAllowed) {
-              score += 3.0;
+              score += 6.0;
               matched = true;
               break;
             }

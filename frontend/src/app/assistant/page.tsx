@@ -14,7 +14,8 @@ import {
   Store,
 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import type { Product } from "@/lib/mock-connector";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { MockConnector, type Product } from "@/lib/mock-connector";
 
 interface Message {
   role: "user" | "assistant";
@@ -71,43 +72,61 @@ export default function AssistantPage() {
         throw new Error("API call failed");
       }
     } catch {
-      // Local intelligent fallback response if backend is unreachable
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `I analyzed our 200+ product catalog for **"${text}"**.\n\nOur top picks are priced across Amazon, Flipkart, and Croma with up to 35% discount against standard retail. Check the suggested products below or click Compare Prices to view 12-month historical price movements.`,
-          model: "ShopPilot Intelligence Offline Heuristic",
-          products: [
-            {
-              id: "ph-001",
-              name: "Apple iPhone 15 (128 GB) - Black",
-              brand: "Apple",
-              category: "phones",
-              slug: "apple-iphone-15-128gb",
-              imageUrl:
-                "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&auto=format&fit=crop&q=60",
-              rating: 4.6,
-              reviewCount: 28400,
-              offers: [
-                {
-                  store: "Amazon.in",
-                  price: 65999,
-                  mrp: 79900,
-                  discountPct: 17,
-                  inStock: true,
-                  deliveryDays: 1,
-                  sellerRating: 4.7,
-                  url: "https://www.amazon.in/s?k=Apple+iPhone+15",
-                  lastUpdated: new Date().toISOString(),
-                },
-              ],
-              priceHistory: [],
-              tags: ["5G", "A16 Bionic"],
-            },
-          ],
-        },
-      ]);
+      // Intelligent grounded client-side fallback using catalog search
+      const conn = new MockConnector();
+      const localMatches = conn.search(text);
+      if (localMatches.length > 0) {
+        const topItem = localMatches[0];
+        const familyName = topItem.familyName || topItem.name;
+        const familyVariants = localMatches.filter(
+          (p) => (p.familyName || p.name) === familyName
+        );
+        const displayItems =
+          familyVariants.length > 0 ? familyVariants : localMatches.slice(0, 3);
+
+        const lines = [
+          `### 🏷️ Current Prices for **${familyName}**\n`,
+          `Here are the verified prices for the **${familyName}** family across connected stores:\n`,
+        ];
+        displayItems.forEach((p) => {
+          const bestOff = p.offers.reduce((a, b) => (a.price < b.price ? a : b));
+          lines.push(`#### **${p.name}**`);
+          lines.push(
+            `- **Best Price:** ₹${bestOff.price.toLocaleString("en-IN")} on **${
+              bestOff.store
+            }** (MRP ₹${bestOff.mrp.toLocaleString("en-IN")})`
+          );
+          lines.push(
+            `- **Customer Score:** ★ ${p.rating} / 5 (${p.reviewCount.toLocaleString(
+              "en-IN"
+            )} ratings)`
+          );
+          lines.push("");
+        });
+        lines.push(
+          "*ShopPilot is strictly a price comparison engine. Purchases take place directly on retailer websites.*"
+        );
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: lines.join("\n"),
+            model: "ShopPilot Grounded Catalog Tools (Local Mode)",
+            products: displayItems,
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `I searched our 5 connected retailers for **"${text}"**, but found no verified product match in our database. Try searching for devices like *Realme GT 6, Samsung S24 Ultra, iPhone 15, or boAt Rockerz 550*.`,
+            model: "ShopPilot Grounded Catalog Tools (Local Mode)",
+            products: [],
+          },
+        ]);
+      }
     }
 
     setLoading(false);
@@ -168,7 +187,11 @@ export default function AssistantPage() {
                     : "bg-gray-950 border border-gray-800 text-gray-200"
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                {msg.role === "assistant" ? (
+                  <MarkdownRenderer content={msg.content} />
+                ) : (
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                )}
 
                 {msg.model && (
                   <span className="text-[10px] text-gray-400 font-mono block pt-1 border-t border-gray-800/80">

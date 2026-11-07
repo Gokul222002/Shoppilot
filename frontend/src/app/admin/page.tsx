@@ -19,6 +19,7 @@ import {
   ArrowLeft,
   FileText,
   GitPullRequest,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface ReviewQueueItem {
@@ -87,6 +88,9 @@ export default function AdminPage() {
   const [reviewActionMsg, setReviewActionMsg] = useState<string | null>(null);
   const [anomalies, setAnomalies] = useState<AnomalyItem[]>([]);
   const [anomalyActionMsg, setAnomalyActionMsg] = useState<string | null>(null);
+  const [adminImages, setAdminImages] = useState<any[]>([]);
+  const [imageInputMap, setImageInputMap] = useState<Record<string, string>>({});
+  const [imageMsg, setImageMsg] = useState<string | null>(null);
   const [evalPairA, setEvalPairA] = useState("Realme 12 Pro+ 5G 256GB");
   const [evalPairB, setEvalPairB] = useState("Realme 12 Pro 5G 256GB");
   const [evalResult, setEvalResult] = useState<any>(null);
@@ -105,12 +109,13 @@ export default function AdminPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [storesRes, syncRes, schedRes, queueRes, anomRes] = await Promise.all([
+      const [storesRes, syncRes, schedRes, queueRes, anomRes, imgRes] = await Promise.all([
         fetch(`${API_BASE}/api/admin/stores`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/sync-status`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/scheduler`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/review-queue`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/anomalies`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/images`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
       ]);
 
       if (storesRes?.stores) setStores(storesRes.stores);
@@ -118,6 +123,7 @@ export default function AdminPage() {
       if (schedRes) setScheduler(schedRes);
       if (queueRes?.queue) setReviewQueue(queueRes.queue);
       if (anomRes?.anomalies) setAnomalies(anomRes.anomalies);
+      if (imgRes?.products) setAdminImages(imgRes.products);
     } catch (err) {
       console.error("Error fetching admin telemetry:", err);
     } finally {
@@ -257,6 +263,29 @@ export default function AdminPage() {
       }
     } catch (err: any) {
       setAnomalyActionMsg(`Action error: ${err.message}`);
+    }
+  };
+
+  const handleSaveImage = async (productId: string, imageUrl: string) => {
+    try {
+      setImageMsg(`Updating image for ${productId}...`);
+      const res = await fetch(`${API_BASE}/api/admin/products/${productId}/image`, {
+        method: "POST",
+        headers: {
+          ...ADMIN_HEADERS,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image_url: imageUrl, verified: Boolean(imageUrl) }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setImageMsg(`Successfully updated image for ${productId}!`);
+        fetchAdminData();
+      } else {
+        setImageMsg(`Error: ${data.detail || "Failed to update image"}`);
+      }
+    } catch (err: any) {
+      setImageMsg(`Network error: ${err.message}`);
     }
   };
 
@@ -898,6 +927,90 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Section 6: Image Management & Verification Center (Workstream 4) */}
+        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-amber-400" /> Image Management & Verification Center
+              </h2>
+              <p className="text-sm text-slate-400">
+                Products without verified photos automatically render high-contrast branded dark placeholders. Upload or paste verified store image URLs below.
+              </p>
+            </div>
+            <span className="text-xs text-amber-400 font-mono bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full">
+              Workstream 4 Verified
+            </span>
+          </div>
+
+          {imageMsg && (
+            <div className="mb-4 p-3 rounded bg-amber-950/40 border border-amber-800/60 text-amber-200 text-xs font-mono">
+              {imageMsg}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
+            {adminImages.slice(0, 18).map((p) => {
+              const currentInput = imageInputMap[p.id] ?? p.image_url;
+              return (
+                <div
+                  key={p.id}
+                  className="p-4 rounded-lg bg-slate-800/60 border border-slate-700/80 flex flex-col justify-between gap-3 text-xs"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-semibold text-amber-400 uppercase tracking-wider text-[10px]">
+                        {p.brand} • {p.category}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          p.image_verified
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            : "bg-slate-700 text-slate-300 border border-slate-600"
+                        }`}
+                      >
+                        {p.image_verified ? "VERIFIED" : "PLACEHOLDER"}
+                      </span>
+                    </div>
+                    <div className="font-bold text-slate-100 line-clamp-1">{p.name}</div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Paste image URL (https://...)"
+                      value={currentInput}
+                      onChange={(e) =>
+                        setImageInputMap({ ...imageInputMap, [p.id]: e.target.value })
+                      }
+                      className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs focus:outline-none focus:border-amber-500"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleSaveImage(p.id, currentInput)}
+                        className="flex-1 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold rounded text-xs transition"
+                      >
+                        Save & Verify
+                      </button>
+                      <button
+                        onClick={() => {
+                          setImageInputMap({ ...imageInputMap, [p.id]: "" });
+                          handleSaveImage(p.id, "");
+                        }}
+                        className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-[11px] transition"
+                        title="Revert to Branded Dark Placeholder"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
       </div>
     </div>

@@ -842,6 +842,54 @@ async def evaluate_matcher_pair(payload: EvaluateMatchPairRequest):
     return res
 
 
+# ─── Image Management Endpoints (Workstream 4) ──────────────────────────────
+
+class UpdateProductImageRequest(BaseModel):
+    image_url: str
+    verified: bool = True
+
+@app.get("/api/admin/images")
+async def list_admin_images(unverified_only: bool = False):
+    """List products with their image source, verification status, and placeholder indicator."""
+    connector = connector_registry.get_active_connector()
+    products = getattr(connector, "products", [])
+    result = []
+    for p in products:
+        is_placeholder = not p.get("imageUrl") or p.get("imageSource") == "placeholder"
+        is_verified = bool(p.get("imageVerified", False))
+        if unverified_only and is_verified:
+            continue
+        result.append({
+            "id": p["id"],
+            "name": p["name"],
+            "brand": p["brand"],
+            "category": p["category"],
+            "family_name": p.get("familyName", p["name"]),
+            "image_url": p.get("imageUrl", ""),
+            "image_source": p.get("imageSource", "placeholder"),
+            "image_verified": is_verified,
+        })
+    return {"total": len(result), "products": result}
+
+@app.post("/api/admin/products/{product_id}/image")
+async def update_product_image(product_id: str, payload: UpdateProductImageRequest):
+    """Admin endpoint to set or verify a product's exact image URL."""
+    connector = connector_registry.get_active_connector()
+    products = getattr(connector, "products", [])
+    found = None
+    for p in products:
+        if p["id"] == product_id:
+            p["imageUrl"] = payload.image_url
+            p["image_url"] = payload.image_url
+            p["imageSource"] = "admin" if payload.image_url else "placeholder"
+            p["imageVerified"] = payload.verified if payload.image_url else False
+            found = p
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"status": "SUCCESS", "product": found}
+
+
 # ─── Price-Drop Alerts System ─────────────────────────────────────────────────
 
 class CreateAlertRequest(BaseModel):
@@ -1053,71 +1101,42 @@ class AssistantQueryRequest(BaseModel):
 @app.post("/api/assistant")
 async def ai_shopping_assistant(payload: AssistantQueryRequest):
     """
-    AI Shopping Advisor: Analyzes query using Gemini API (with heuristic catalog fallback)
-    and returns expert advice along with matching catalog products.
-    Protected with prompt-injection defenses and untrusted URL filter.
+    AI Shopping Advisor (Workstream 5 & Defect D5 Resolution):
+    Analyzes queries with strict database grounding using Gemini Function Calling tools
+    and offline deterministic tool execution.
+    Protected with prompt-injection defense and anti-scraping policy.
     """
-    from app.agent.assistant import extract_budget, ask_gemini, generate_heuristic_advice, sanitize_and_check_injection
+    from app.agent.assistant import (
+        ask_gemini_with_tools,
+        generate_offline_expert_advice,
+        extract_budget,
+    )
 
     q = payload.query.strip()
     if not q:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    # Prompt-injection guardrail check
-    injection_block = sanitize_and_check_injection(q)
-    if injection_block:
-        return {
-            "query": q,
-            "response": injection_block,
-            "budget": None,
-            "model": "ShopPilot Prompt-Injection Defense Guard",
-            "products": [],
-        }
-
     budget = extract_budget(q)
-    tokens = [t.lower() for t in re.sub(r"[^\w\s]", " ", q).split() if len(t) > 2]
 
-    # Filter matching products from catalog
-    matching = []
-    for p in PRODUCTS:
-        name_lower = p["name"].lower()
-        cat_lower = p["category"].lower()
-        brand_lower = p["brand"].lower()
-        tags_lower = [t.lower() for t in p.get("tags", [])]
+    # 1. Try Gemini Function Calling first if API key is present
+    gemini_result = None
+    if settings.GEMINI_API_KEY:
+        gemini_result = await ask_gemini_with_tools(q)
 
-        matches = any(tok in name_lower or tok in cat_lower or tok in brand_lower or any(tok in tg for tg in tags_lower) for tok in tokens)
-        if matches:
-            if budget and p["best_price"] > budget * 1.25:
-                continue
-            matching.append(p)
-
-    # Sort matching by rating & reviews
-    matching.sort(key=lambda x: (x["rating"], x["review_count"]), reverse=True)
-    top_matches = matching[:4] if matching else PRODUCTS[:3]
-    top_ids = [p["id"] for p in top_matches]
-
-    # Try Gemini API first if configured
-    system_prompt = (
-        "You are the ShopPilot AI Shopping Advisor. "
-        "Available verified store products:\n" +
-        "\n".join([f"- {p['name']}: ₹{p['best_price']} (MRP ₹{p['mrp']}) on {p['offers'][0]['store'] if p['offers'] else 'Amazon'}, Rating {p['rating']}★" for p in top_matches]) +
-        "\nProvide concise shopping advice. Emphasize value and key specs. Never mention carts or checkouts, as ShopPilot is strictly price comparison."
-    )
-
-    gemini_resp = await ask_gemini(system_prompt, q, top_ids)
-    if gemini_resp:
-        response_text = gemini_resp
-        model_used = settings.VISION_MODEL_NAME
+    if gemini_result:
+        response_text, referenced_products = gemini_result
+        model_used = f"Gemini 1.5 ({settings.VISION_MODEL_NAME}) Tool-Grounded"
     else:
-        response_text = generate_heuristic_advice(q, top_matches, budget)
-        model_used = "ShopPilot Catalog AI Heuristic"
+        # 2. Offline deterministic tool execution (fixes Defect D5)
+        response_text, referenced_products = generate_offline_expert_advice(q)
+        model_used = "ShopPilot Grounded Catalog Tools (Offline Mode)"
 
     return {
         "query": q,
         "response": response_text,
         "budget": budget,
         "model": model_used,
-        "products": top_matches,
+        "products": referenced_products[:4] if referenced_products else [],
     }
 
 

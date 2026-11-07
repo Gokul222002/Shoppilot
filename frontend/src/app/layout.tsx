@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PwaRegistrar from "@/components/PwaRegistrar";
 import CookieConsent from "@/components/CookieConsent";
+import DemoPricesBanner from "@/components/DemoPricesBanner";
 
 export const viewport: Viewport = {
   themeColor: "#030712",
@@ -52,6 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-gray-950 text-gray-100 min-h-screen antialiased selection:bg-orange-500 selection:text-white flex flex-col">
+        <DemoPricesBanner />
         <PwaRegistrar />
         <Navbar />
         <main className="flex-1">{children}</main>

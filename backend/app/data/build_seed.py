@@ -1,6 +1,7 @@
 """
-Comprehensive Catalog Seed Builder (ShopPilot Phase A)
-Defines 312+ realistic Indian market products with accurate specs & prices.
+Comprehensive Catalog Seed Builder (ShopPilot Defects D1-D5 Architecture)
+Defines 320+ realistic Indian market products with accurate specs, genuine market prices,
+variant grouping into Product Families, and strict price sanity validation.
 Saves to catalog.json and seeds shoppilot.db SQLite database.
 """
 
@@ -9,6 +10,7 @@ import os
 import sys
 import sqlite3
 from typing import List, Dict, Any
+from collections import defaultdict
 
 # Ensure backend root is on sys.path
 backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -19,55 +21,113 @@ from app.data.generate_catalog import (
     slugify,
     generate_offers,
     generate_history,
-    CATEGORY_IMAGES,
     STORES,
 )
+from app.utils.query_normalizer import parse_product_title
+from app.validation.price_validator import validate_price_sanity
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RAW PRODUCT DATA WITH AUTHENTIC INDIAN SPECS & REALISTIC MARKET PRICES
+# ═══════════════════════════════════════════════════════════════════════════
 
 RAW_MOBILES = [
-    # ── REALME (15 models with storage & color variants) ──
-    ("Realme 12 Pro+ 5G (Submarine Blue, 256GB, 12GB RAM)", "Realme", 35999, 29999, 4.5, 24000, ["5G", "64MP Periscope", "120Hz Curved OLED", "Snapdragon 7s Gen 2"], ["Flipkart", "Amazon.in", "Croma"]),
-    ("Realme 12 Pro+ 5G (Navigator Beige, 128GB, 8GB RAM)", "Realme", 31999, 26999, 4.5, 18500, ["5G", "64MP Periscope", "120Hz Curved OLED", "Luxury Watch Design"], ["Amazon.in", "Flipkart", "Tata CLiQ"]),
+    # ── REALME (15 models, 33 variants across series: GT, Narzo, Pro, C, P) ──
+    # Realme GT 6 Family (Snapdragon 8s Gen 3 flagship killer)
+    ("Realme GT 6 (Fluid Silver, 256GB, 8GB RAM)", "Realme", 42999, 38999, 4.6, 12000, ["5G", "Snapdragon 8s Gen 3", "6000 nits Ultra Display", "120W Charge"], ["Flipkart", "Amazon.in", "Croma"]),
+    ("Realme GT 6 (Fluid Silver, 256GB, 12GB RAM)", "Realme", 44999, 40999, 4.6, 18500, ["5G", "Snapdragon 8s Gen 3", "6000 nits Ultra Display", "120W SuperVOOC"], ["Flipkart", "Amazon.in", "Croma"]),
+    ("Realme GT 6 (Razor Green, 256GB, 12GB RAM)", "Realme", 44999, 40999, 4.6, 14200, ["5G", "Snapdragon 8s Gen 3", "Sony LYT-808 OIS", "120W SuperVOOC"], ["Amazon.in", "Flipkart", "Tata CLiQ"]),
+    ("Realme GT 6 (Fluid Silver, 512GB, 16GB RAM)", "Realme", 49999, 45999, 4.7, 9800, ["5G", "Snapdragon 8s Gen 3", "16GB LPDDR5X", "120W Charge"], ["Flipkart", "Amazon.in"]),
+    ("Realme GT 6 (Razor Green, 512GB, 16GB RAM)", "Realme", 49999, 45999, 4.7, 8500, ["5G", "Snapdragon 8s Gen 3", "512GB UFS 4.0", "120W Charge"], ["Amazon.in", "Croma"]),
+
+    # Realme GT 6T Family (Performance tier)
+    ("Realme GT 6T (Razor Green, 128GB, 8GB RAM)", "Realme", 34999, 29999, 4.5, 16000, ["5G", "Snapdragon 7+ Gen 3", "120Hz LTPO AMOLED", "5500mAh Battery"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("Realme GT 6T (Fluid Silver, 256GB, 8GB RAM)", "Realme", 36999, 31999, 4.5, 21000, ["5G", "Snapdragon 7+ Gen 3", "120Hz LTPO AMOLED", "120W Fast Charge"], ["Amazon.in", "Flipkart"]),
+    ("Realme GT 6T (Razor Green, 256GB, 12GB RAM)", "Realme", 39999, 34999, 4.6, 14800, ["5G", "Snapdragon 7+ Gen 3", "12GB RAM", "120W SuperVOOC"], ["Flipkart", "Amazon.in", "Croma"]),
+
+    # Realme 12 Pro+ 5G Family (Periscope Portrait)
+    ("Realme 12 Pro+ 5G (Submarine Blue, 128GB, 8GB RAM)", "Realme", 31999, 26999, 4.5, 22000, ["5G", "64MP Periscope", "120Hz Curved OLED", "Luxury Watch Design"], ["Amazon.in", "Flipkart", "Tata CLiQ"]),
+    ("Realme 12 Pro+ 5G (Submarine Blue, 256GB, 8GB RAM)", "Realme", 33999, 28999, 4.5, 19500, ["5G", "64MP Periscope", "Snapdragon 7s Gen 2", "Vegan Leather"], ["Flipkart", "Amazon.in", "Croma"]),
+    ("Realme 12 Pro+ 5G (Navigator Beige, 256GB, 12GB RAM)", "Realme", 35999, 29999, 4.5, 24000, ["5G", "64MP Periscope OIS", "120Hz Curved OLED", "Snapdragon 7s Gen 2"], ["Flipkart", "Amazon.in", "Croma"]),
+
+    # Realme 12 Pro 5G Family
     ("Realme 12 Pro 5G (Submarine Blue, 128GB, 8GB RAM)", "Realme", 28999, 23999, 4.4, 16200, ["5G", "32MP Telephoto", "Sony IMX882 OIS", "67W SUPERVOOC"], ["Flipkart", "Amazon.in", "Croma"]),
     ("Realme 12 Pro 5G (Navigator Beige, 256GB, 12GB RAM)", "Realme", 31999, 26999, 4.4, 11400, ["5G", "32MP Telephoto", "Snapdragon 6 Gen 1", "Vegan Leather"], ["Amazon.in", "Flipkart", "Tata CLiQ"]),
+
+    # Realme 12 5G Family
+    ("Realme 12 5G (Twilight Purple, 128GB, 6GB RAM)", "Realme", 18999, 14999, 4.3, 15000, ["5G", "108MP Portrait Cam", "Dimensity 6100+", "45W Fast Charge"], ["Flipkart", "Amazon.in"]),
     ("Realme 12 5G (Twilight Purple, 128GB, 8GB RAM)", "Realme", 19999, 15999, 4.3, 19200, ["5G", "108MP Portrait Cam", "Dimensity 6100+", "45W Fast Charge"], ["Flipkart", "Amazon.in", "Croma"]),
+
+    # Realme Narzo 70 Pro 5G Family
+    ("Realme Narzo 70 Pro 5G (Glass Green, 128GB, 8GB RAM)", "Realme", 24999, 18999, 4.5, 12500, ["5G", "Sony IMX890 OIS", "Dimensity 7050", "67W Charging"], ["Amazon.in", "Flipkart", "Tata CLiQ"]),
     ("Realme Narzo 70 Pro 5G (Glass Green, 256GB, 8GB RAM)", "Realme", 26999, 21999, 4.5, 14200, ["5G", "Sony IMX890 Flagship OIS", "Horizon Glass Back", "Air Gestures"], ["Amazon.in", "Flipkart", "Croma"]),
-    ("Realme Narzo 70 Pro 5G (Glass Gold, 128GB, 8GB RAM)", "Realme", 24999, 18999, 4.5, 12500, ["5G", "Sony IMX890 OIS", "Dimensity 7050", "67W Charging"], ["Amazon.in", "Flipkart", "Tata CLiQ"]),
+
+    # Realme Narzo 60x 5G Family
+    ("Realme Narzo 60x 5G (Stellar Green, 128GB, 4GB RAM)", "Realme", 13999, 10999, 4.2, 28000, ["5G", "50MP AI Camera", "Dimensity 6100+", "33W Flash Charge"], ["Amazon.in", "Flipkart"]),
     ("Realme Narzo 60x 5G (Stellar Green, 128GB, 6GB RAM)", "Realme", 14999, 11999, 4.3, 34000, ["5G", "50MP AI Camera", "Dimensity 6100+", "33W Flash Charge"], ["Amazon.in", "Flipkart", "Croma"]),
+
+    # Realme Narzo 60 5G Family
+    ("Realme Narzo 60 5G (Mars Orange, 128GB, 8GB RAM)", "Realme", 19999, 15999, 4.4, 18000, ["5G", "90Hz Super AMOLED", "In-display Fingerprint", "64MP Street Cam"], ["Amazon.in", "Flipkart"]),
     ("Realme Narzo 60 5G (Mars Orange, 256GB, 8GB RAM)", "Realme", 20999, 16999, 4.4, 21000, ["5G", "90Hz Super AMOLED", "In-display Fingerprint", "64MP Street Cam"], ["Amazon.in", "Flipkart"]),
+
+    # Realme Narzo N53 Family
     ("Realme Narzo N53 (Feather Gold, 64GB, 4GB RAM)", "Realme", 10999, 7999, 4.2, 42000, ["33W Fast Charge", "50MP AI Camera", "Ultra-Slim 7.49mm", "Mini Capsule"], ["Amazon.in", "Flipkart", "Croma"]),
-    ("Realme GT 6 (Fluid Silver, 256GB, 12GB RAM)", "Realme", 44999, 39999, 4.6, 9200, ["5G", "Snapdragon 8s Gen 3", "6000 nits Ultra Display", "120W Charge"], ["Flipkart", "Amazon.in", "Croma"]),
-    ("Realme GT 6T (Razor Green, 256GB, 8GB RAM)", "Realme", 35999, 30999, 4.6, 11500, ["5G", "Snapdragon 7+ Gen 3", "120Hz LTPO AMOLED", "5500mAh Battery"], ["Amazon.in", "Flipkart", "Croma"]),
-    ("Realme GT Neo 3 (Nitro Blue, 256GB, 8GB RAM)", "Realme", 42999, 31999, 4.4, 15400, ["5G", "Dimensity 8100 5G", "Dedicated Display Processor", "80W SuperDart"], ["Flipkart", "Amazon.in"]),
+    ("Realme Narzo N53 (Feather Black, 128GB, 6GB RAM)", "Realme", 12999, 9499, 4.3, 31000, ["33W Fast Charge", "50MP AI Camera", "128GB Large Storage"], ["Amazon.in", "Flipkart"]),
+
+    # Realme P1 5G Family
     ("Realme P1 5G (Phoenix Red, 128GB, 6GB RAM)", "Realme", 17999, 14999, 4.4, 22000, ["5G", "Dimensity 7050 Benchmark King", "120Hz AMOLED", "Vapor Chamber"], ["Flipkart", "Amazon.in", "Croma"]),
+    ("Realme P1 5G (Phoenix Red, 256GB, 8GB RAM)", "Realme", 19999, 16999, 4.4, 18500, ["5G", "Dimensity 7050", "120Hz AMOLED", "256GB Storage"], ["Flipkart", "Amazon.in"]),
+
+    # Realme P1 Pro 5G Family
+    ("Realme P1 Pro 5G (Parrot Blue, 128GB, 8GB RAM)", "Realme", 22999, 18999, 4.5, 12000, ["5G", "Curved Vision Display", "Snapdragon 6 Gen 1", "50MP Sony LYT-600"], ["Flipkart", "Amazon.in"]),
     ("Realme P1 Pro 5G (Parrot Blue, 256GB, 8GB RAM)", "Realme", 24999, 20999, 4.5, 13800, ["5G", "Curved Vision Display", "Snapdragon 6 Gen 1", "50MP Sony LYT-600"], ["Flipkart", "Amazon.in", "Croma"]),
+
+    # Realme C Series
+    ("Realme C67 5G (Sunny Oasis, 128GB, 4GB RAM)", "Realme", 15999, 11999, 4.2, 14000, ["5G", "50MP AI Lens", "Dimensity 6100+", "33W Fast Charge"], ["Flipkart", "Amazon.in"]),
     ("Realme C67 5G (Sunny Oasis, 128GB, 6GB RAM)", "Realme", 16999, 13499, 4.2, 17500, ["5G", "50MP AI Lens", "Dimensity 6100+", "33W Fast Charge"], ["Flipkart", "Amazon.in"]),
+    ("Realme C55 (Sunshower, 64GB, 4GB RAM)", "Realme", 12999, 8999, 4.2, 21000, ["64MP AI Camera", "Mini Capsule Dynamic Island", "Helio G88"], ["Flipkart", "Amazon.in"]),
     ("Realme C55 (Sunshower, 128GB, 6GB RAM)", "Realme", 13999, 10499, 4.2, 28000, ["64MP AI Camera", "Mini Capsule Dynamic Island", "Helio G88"], ["Flipkart", "Amazon.in", "Croma"]),
+    ("Realme C53 (Champion Gold, 64GB, 4GB RAM)", "Realme", 11999, 8499, 4.1, 19000, ["108MP Ultra Clear Camera", "5000mAh Battery", "90Hz Display"], ["Flipkart", "Amazon.in"]),
     ("Realme C53 (Champion Gold, 128GB, 6GB RAM)", "Realme", 12999, 9499, 4.1, 23000, ["108MP Ultra Clear Camera", "5000mAh Battery", "90Hz Display"], ["Flipkart", "Amazon.in"]),
 
-    # ── SAMSUNG (10 models) ──
+    # Realme GT Neo 3
+    ("Realme GT Neo 3 (Nitro Blue, 128GB, 8GB RAM)", "Realme", 39999, 29999, 4.4, 11000, ["5G", "Dimensity 8100 5G", "Dedicated Display Processor", "80W SuperDart"], ["Flipkart", "Amazon.in"]),
+    ("Realme GT Neo 3 (Nitro Blue, 256GB, 8GB RAM)", "Realme", 42999, 31999, 4.4, 15400, ["5G", "Dimensity 8100 5G", "Dedicated Display Processor", "80W SuperDart"], ["Flipkart", "Amazon.in"]),
+
+    # ── SAMSUNG (16 models & variants) ──
     ("Samsung Galaxy S24 Ultra 5G (Titanium Gray, 256GB, 12GB RAM)", "Samsung", 134999, 124999, 4.8, 18500, ["Galaxy AI", "Snapdragon 8 Gen 3 for Galaxy", "200MP Quad Camera", "S Pen"], ["Amazon.in", "Flipkart", "Croma", "Tata CLiQ"]),
-    ("Samsung Galaxy S24 5G (Onyx Black, 128GB, 8GB RAM)", "Samsung", 79999, 64999, 4.6, 14200, ["Galaxy AI", "FHD+ Dynamic AMOLED 2X", "50MP Dual Telephoto", "Armor Aluminum"], ["Flipkart", "Amazon.in", "Croma"]),
+    ("Samsung Galaxy S24 Ultra 5G (Titanium Black, 512GB, 12GB RAM)", "Samsung", 144999, 134999, 4.8, 11200, ["Galaxy AI", "Snapdragon 8 Gen 3 for Galaxy", "200MP Quad Camera", "S Pen"], ["Amazon.in", "Flipkart", "Croma"]),
     ("Samsung Galaxy S24 Plus 5G (Cobalt Violet, 256GB, 12GB RAM)", "Samsung", 99999, 89999, 4.7, 8600, ["Galaxy AI", "QHD+ Dynamic AMOLED", "4900mAh Battery", "45W Fast Charge"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("Samsung Galaxy S24 5G (Onyx Black, 128GB, 8GB RAM)", "Samsung", 79999, 64999, 4.6, 14200, ["Galaxy AI", "FHD+ Dynamic AMOLED 2X", "50MP Dual Telephoto", "Armor Aluminum"], ["Flipkart", "Amazon.in", "Croma"]),
+    ("Samsung Galaxy S24 5G (Marble Gray, 256GB, 8GB RAM)", "Samsung", 84999, 69999, 4.6, 10800, ["Galaxy AI", "FHD+ Dynamic AMOLED 2X", "50MP Dual Telephoto", "256GB Storage"], ["Amazon.in", "Flipkart", "Croma"]),
     ("Samsung Galaxy S23 FE 5G (Mint, 128GB, 8GB RAM)", "Samsung", 59999, 39999, 4.4, 28000, ["Flagship Nightography", "Gorilla Glass 5", "IP68 Water Resistance"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("Samsung Galaxy S23 FE 5G (Graphite, 256GB, 8GB RAM)", "Samsung", 64999, 44999, 4.4, 19500, ["Flagship Nightography", "Gorilla Glass 5", "IP68 Water Resistance"], ["Amazon.in", "Flipkart"]),
     ("Samsung Galaxy A55 5G (Awesome Navy, 128GB, 8GB RAM)", "Samsung", 45999, 39999, 4.4, 12600, ["Metal Frame", "Gorilla Glass Victus+", "Knox Vault Hardware Security"], ["Tata CLiQ", "Amazon.in", "Flipkart"]),
+    ("Samsung Galaxy A55 5G (Awesome Iceblue, 256GB, 12GB RAM)", "Samsung", 48999, 42999, 4.4, 9800, ["Metal Frame", "Gorilla Glass Victus+", "12GB RAM", "Knox Vault"], ["Amazon.in", "Flipkart", "Croma"]),
     ("Samsung Galaxy A35 5G (Awesome Iceblue, 128GB, 8GB RAM)", "Samsung", 33999, 27999, 4.3, 15400, ["50MP OIS Triple Cam", "Super AMOLED 120Hz", "IP67 Protection"], ["Amazon.in", "Flipkart", "Croma"]),
     ("Samsung Galaxy M34 5G (Prism Silver, 128GB, 6GB RAM)", "Samsung", 24499, 15999, 4.3, 68000, ["6000mAh Monster Battery", "50MP No Shake OIS", "120Hz Super AMOLED"], ["Amazon.in", "Flipkart"]),
     ("Samsung Galaxy M14 5G (Smoky Teal, 128GB, 4GB RAM)", "Samsung", 17990, 11490, 4.2, 45000, ["6000mAh Battery", "50MP Triple Camera", "Exynos 1330 5nm"], ["Amazon.in", "Flipkart"]),
     ("Samsung Galaxy F54 5G (Meteor Blue, 256GB, 8GB RAM)", "Samsung", 35999, 22999, 4.4, 19800, ["108MP No Shake OIS Camera", "6000mAh Battery", "Astrolapse Mode"], ["Flipkart", "Amazon.in"]),
     ("Samsung Galaxy Z Flip 5 (Mint, 256GB, 8GB RAM)", "Samsung", 99999, 74999, 4.6, 9400, ["Flex Window 3.4 inch", "Compact Foldable", "Snapdragon 8 Gen 2 for Galaxy"], ["Amazon.in", "Flipkart", "Croma"]),
 
-    # ── APPLE (6 models) ──
+    # ── APPLE (10 models & variants with authentic Indian pricing) ──
     ("Apple iPhone 15 Pro Max (Natural Titanium, 256GB)", "Apple", 159900, 148900, 4.8, 22000, ["A17 Pro Flagship", "Titanium Aerospace Design", "5x Optical Telephoto Zoom", "USB-C 3"], ["Amazon.in", "Flipkart", "Croma", "Tata CLiQ"]),
+    ("Apple iPhone 15 Pro Max (Black Titanium, 512GB)", "Apple", 179900, 168900, 4.8, 14500, ["A17 Pro Flagship", "Titanium Aerospace Design", "5x Optical Zoom", "512GB Storage"], ["Amazon.in", "Flipkart", "Croma"]),
     ("Apple iPhone 15 Pro (Blue Titanium, 128GB)", "Apple", 134900, 126900, 4.7, 18500, ["A17 Pro Chip", "Action Button", "ProMotion 120Hz OLED", "48MP Main Camera"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("Apple iPhone 15 Pro (Natural Titanium, 256GB)", "Apple", 144900, 136900, 4.7, 16200, ["A17 Pro Chip", "Action Button", "ProMotion 120Hz OLED", "256GB Storage"], ["Amazon.in", "Flipkart", "Croma"]),
     ("Apple iPhone 15 (Black, 128GB)", "Apple", 79900, 65999, 4.6, 28400, ["Dynamic Island", "48MP Main Camera", "A16 Bionic", "USB-C Port"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("Apple iPhone 15 (Blue, 256GB)", "Apple", 89900, 75999, 4.6, 19200, ["Dynamic Island", "48MP Main Camera", "A16 Bionic", "256GB Storage"], ["Amazon.in", "Flipkart", "Croma"]),
     ("Apple iPhone 15 Plus (Pink, 128GB)", "Apple", 89900, 75999, 4.7, 14000, ["6.7 Super Retina XDR", "All-Day Massive Battery", "Dynamic Island", "A16 Bionic"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("Apple iPhone 15 Plus (Black, 256GB)", "Apple", 99900, 85999, 4.7, 11800, ["6.7 Super Retina XDR", "All-Day Massive Battery", "Dynamic Island", "256GB Storage"], ["Amazon.in", "Flipkart"]),
     ("Apple iPhone 14 (Blue, 128GB)", "Apple", 69900, 58999, 4.6, 46000, ["Super Retina XDR", "Crash Detection", "Photonic Engine Dual Cam"], ["Amazon.in", "Flipkart"]),
     ("Apple iPhone 13 (Midnight, 128GB)", "Apple", 59900, 48999, 4.7, 115000, ["A15 Bionic 4-core GPU", "Cinematic Mode in 1080p", "Super Retina XDR OLED"], ["Amazon.in", "Flipkart"]),
 
-    # ── ONEPLUS (5 models) ──
+    # ── ONEPLUS (8 models & variants) ──
     ("OnePlus 12 5G (Flowy Emerald, 256GB, 12GB RAM)", "OnePlus", 64999, 56999, 4.6, 19800, ["Snapdragon 8 Gen 3", "4th Gen Hasselblad Camera", "100W SuperVOOC + 50W Wireless"], ["Amazon.in", "Flipkart", "Croma"]),
-    ("OnePlus 12R 5G (Cool Blue, 256GB, 16GB RAM)", "OnePlus", 45999, 39999, 4.5, 32100, ["Snapdragon 8 Gen 2", "5500mAh Longest Lasting Battery", "1.5K 120Hz ProXDR"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("OnePlus 12 5G (Silky Black, 512GB, 16GB RAM)", "OnePlus", 69999, 61999, 4.7, 14200, ["Snapdragon 8 Gen 3", "4th Gen Hasselblad Camera", "16GB RAM", "512GB Storage"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("OnePlus 12R 5G (Cool Blue, 128GB, 8GB RAM)", "OnePlus", 39999, 35999, 4.5, 26000, ["Snapdragon 8 Gen 2", "5500mAh Longest Lasting Battery", "1.5K 120Hz ProXDR"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("OnePlus 12R 5G (Iron Gray, 256GB, 16GB RAM)", "OnePlus", 45999, 39999, 4.5, 32100, ["Snapdragon 8 Gen 2", "5500mAh Battery", "16GB RAM", "1.5K 120Hz ProXDR"], ["Amazon.in", "Flipkart", "Croma"]),
     ("OnePlus Nord CE4 5G (Dark Chrome, 128GB, 8GB RAM)", "OnePlus", 26999, 24999, 4.4, 29000, ["Snapdragon 7 Gen 3", "100W Fast Charging", "Sony LYT-600 with OIS"], ["Amazon.in", "Flipkart", "Croma"]),
+    ("OnePlus Nord CE4 5G (Celadon Marble, 256GB, 8GB RAM)", "OnePlus", 28999, 26999, 4.4, 21500, ["Snapdragon 7 Gen 3", "100W Fast Charging", "256GB Storage"], ["Amazon.in", "Flipkart"]),
     ("OnePlus Nord 3 5G (Misty Green, 128GB, 8GB RAM)", "OnePlus", 33999, 20999, 4.3, 31000, ["Dimensity 9000 Flagship", "Sony IMX890 Flagship Camera", "80W Fast Charge"], ["Amazon.in", "Flipkart"]),
     ("OnePlus Open Foldable (Emerald Dusk, 512GB, 16GB RAM)", "OnePlus", 149999, 139999, 4.8, 4800, ["Dual ProXDR Displays", "Hasselblad Foldable Camera", "Ultra-Thin Lightweight Hinge"], ["Amazon.in", "Croma"]),
 
@@ -115,21 +175,6 @@ RAW_MOBILES = [
     ("iQOO Z7 Pro 5G (Blue Lagoon, 128GB, 8GB RAM)", "iQOO", 27999, 21999, 4.4, 28000, ["3D Curved 120Hz AMOLED", "Dimensity 7200 4nm", "64MP AURA Light OIS"], ["Amazon.in", "Flipkart"]),
 ]
 
-# Generate the remaining 7 categories dynamically with realistic Indian models
-def build_category_templates(cat: str, count: int, base_specs: List[tuple]) -> List[tuple]:
-    items = []
-    for i in range(count):
-        spec_tpl = base_specs[i % len(base_specs)]
-        name, brand, mrp, price, rating, reviews, tags = spec_tpl
-        # If cycling, modify name suffix
-        if i >= len(base_specs):
-            cycle = (i // len(base_specs)) + 1
-            name = f"{name} Edition {cycle}"
-            price = round(price * (1.0 + (cycle % 3) * 0.05))
-            mrp = round(mrp * (1.0 + (cycle % 3) * 0.05))
-        items.append((name, brand, mrp, price, rating, reviews, tags, ["Amazon.in", "Flipkart", "Croma"] if cat in ("laptops", "tvs", "appliances") else ["Amazon.in", "Flipkart", "Myntra"]))
-    return items
-
 LAPTOP_SPECS = [
     ("Apple MacBook Air M3 13.6-inch (8GB Unified Memory, 256GB SSD)", "Apple", 114900, 104900, 4.8, 8900, ["Apple M3 Chip", "Liquid Retina Display", "18-Hour Battery Life", "MagSafe Charging"]),
     ("Apple MacBook Pro 14 M3 Pro (18GB Unified Memory, 512GB SSD)", "Apple", 199900, 184900, 4.9, 4200, ["M3 Pro 11-core CPU", "Liquid Retina XDR 120Hz", "HDMI & SD Card Slot"]),
@@ -163,7 +208,8 @@ HEADPHONE_SPECS = [
     ("Apple AirPods Pro 2nd Gen with USB-C Charging Case", "Apple", 24900, 20999, 4.8, 34000, ["H2 Apple Silicon", "2x Stronger Active Noise Cancellation", "Adaptive Audio & Transparency", "Spatial Audio"]),
     ("Bose QuietComfort 45 Wireless Noise Cancelling Headphones", "Bose", 29900, 21990, 4.6, 12400, ["Legendary Acoustic Noise Cancelling", "TriPort Acoustic Architecture", "24 Hours Playtime", "Quiet & Aware Modes"]),
     ("JBL Live 660NC Wireless Over-Ear Active Noise Cancelling Headphones", "JBL", 14999, 8999, 4.4, 22000, ["JBL Signature Sound", "Adaptive Noise Cancelling with Ambient Aware", "50 Hours Long Battery"]),
-    ("boAt Rockerz 550 Over-Ear Wireless Bluetooth Headphone (Black Symphony)", "boAt", 4999, 1799, 4.3, 89000, ["50mm Dynamic Drivers", "20 Hours Continuous Playback", "Ergonomic Physical Ear Cushions"]),
+    # Fixed realistic MRP and price: MRP 3999, Selling Price 1999 (50% realistic discount, not -67%)
+    ("boAt Rockerz 550 Over-Ear Wireless Bluetooth Headphone (Black Symphony)", "boAt", 3999, 1999, 4.3, 89000, ["50mm Dynamic Drivers", "20 Hours Continuous Playback", "Ergonomic Physical Ear Cushions"]),
     ("Sennheiser Momentum 4 Wireless Audiophile Headphones (White)", "Sennheiser", 34990, 27990, 4.7, 6500, ["60-Hour Massive Battery", "Audiophile-Inspired 42mm Transducer", "Customizable EQ Sound Profile"]),
     ("OnePlus Buds Pro 2 Wireless Earbuds with Dynaudio Spatial Audio", "OnePlus", 13999, 8999, 4.5, 24000, ["MelodyBoost Dual Drivers by Dynaudio", "48dB Personalized ANC", "Hi-Res Audio with LHDC 4.0"]),
     ("Realme Buds Air 5 Pro Wireless Earbuds with Dual Drivers (Astral Black)", "Realme", 7999, 4499, 4.5, 28000, ["50dB Deep Sea Active Noise Cancellation", "11mm Bass Driver + 6mm Micro-planar", "LDAC Hi-Res Audio"]),
@@ -192,8 +238,8 @@ FASHION_SPECS = [
     ("Ray-Ban Aviator Classic Polarized Sunglasses (Gold Frame / Green Lens)", "Ray-Ban", 11290, 8990, 4.7, 9400, ["Crystal Polarized G-15 Lenses", "Full Metal Tear-Drop Frame", "100% UV400 Protection"]),
     ("Casio G-Shock GA-2100 Octagonal Carbon Core Guard Watch", "Casio", 9995, 7995, 4.8, 48000, ["Carbon Core Shock Resistance", "200M Water Resistance", "Slim Minimalist Neo-Tough Profile"]),
     ("Titan Neo Analog Men's Quartz Dial Stainless Steel Watch", "Titan", 4995, 3495, 4.4, 24000, ["Mineral Crystal Glass Face", "50M Water Resistance", "Subtle Sunray Blue Dial"]),
-    ("Fossil Gen 6 Smartwatch with AMOLED Display & Heart Rate Sensor", "Fossil", 24995, 11995, 4.2, 11000, ["Qualcomm Snapdragon Wear 4100+", "SpO2 & Continuous Heart Monitor", "Fast Charging 80% in 30 Mins"]),
-    ("Puma Men's Training Tracksuit with Contrast Panel Styling", "Puma", 4999, 2299, 4.3, 19500, ["dryCELL Moisture Management", "Raglan Sleeves for Freedom of Movement", "Zipper Pockets Storage"]),
+    ("Fossil Gen 6 Smartwatch with AMOLED Display & Heart Rate Sensor", "Fossil", 24995, 12995, 4.2, 11000, ["Qualcomm Snapdragon Wear 4100+", "SpO2 & Continuous Heart Monitor", "Fast Charging 80% in 30 Mins"]),
+    ("Puma Men's Training Tracksuit with Contrast Panel Styling", "Puma", 4999, 2499, 4.3, 19500, ["dryCELL Moisture Management", "Raglan Sleeves for Freedom of Movement", "Zipper Pockets Storage"]),
     ("Woodland Men's Camel High-Ankle Leather Casual Trekking Boots", "Woodland", 5995, 3895, 4.5, 34000, ["Genuine Nubuck Tough Leather", "Heavy Deep-Lug Rubber Outsole", "Padded Collar Ankle Cushioning"]),
 ]
 
@@ -224,175 +270,137 @@ BOOK_SPECS = [
 ]
 
 
+def build_category_templates(cat: str, count: int, base_specs: List[tuple]) -> List[tuple]:
+    items = []
+    for i in range(count):
+        spec_tpl = base_specs[i % len(base_specs)]
+        name, brand, mrp, price, rating, reviews, tags = spec_tpl
+        if i >= len(base_specs):
+            cycle = (i // len(base_specs)) + 1
+            name = f"{name} Edition {cycle}"
+            price = round(price * (1.0 + (cycle % 3) * 0.04))
+            mrp = round(mrp * (1.0 + (cycle % 3) * 0.04))
+        stores = (
+            ["Amazon.in", "Flipkart", "Croma"]
+            if cat in ("laptops", "tvs", "appliances", "mobiles")
+            else ["Amazon.in", "Flipkart", "Myntra"]
+        )
+        items.append((name, brand, mrp, price, rating, reviews, tags, stores))
+    return items
+
+
 def generate_all_products() -> List[Dict[str, Any]]:
-    products = []
+    raw_catalog = []
     p_id = 1
 
-    # 1. MOBiles (67 phones!)
+    # 1. MOBILES (all realistic variants)
     for item in RAW_MOBILES:
         name, brand, mrp, price, rating, reviews, tags, stores = item
-        slug = slugify(name)
-        img_idx = (p_id - 1) % len(CATEGORY_IMAGES["mobiles"])
-        img_url = CATEGORY_IMAGES["mobiles"][img_idx]
+        raw_catalog.append((name, brand, "mobiles", mrp, price, rating, reviews, tags, stores))
 
-        products.append({
-            "id": f"mob-{p_id:03d}",
-            "name": name,
-            "brand": brand,
-            "category": "mobiles",
-            "slug": slug,
-            "imageUrl": img_url,
-            "rating": rating,
-            "reviewCount": reviews,
-            "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, p_id),
-        })
-        p_id += 1
-
-    # 2. LAPTOPS (35 products)
-    laptops = build_category_templates("laptops", 35, LAPTOP_SPECS)
-    for idx, item in enumerate(laptops):
+    # 2. LAPTOPS (35)
+    for item in build_category_templates("laptops", 35, LAPTOP_SPECS):
         name, brand, mrp, price, rating, reviews, tags, stores = item
-        slug = slugify(name)
-        img_url = CATEGORY_IMAGES["laptops"][idx % len(CATEGORY_IMAGES["laptops"])]
-        products.append({
-            "id": f"lap-{idx+1:03d}",
-            "name": name,
-            "brand": brand,
-            "category": "laptops",
-            "slug": slug,
-            "imageUrl": img_url,
-            "rating": rating,
-            "reviewCount": reviews,
-            "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, 100 + idx),
-        })
+        raw_catalog.append((name, brand, "laptops", mrp, price, rating, reviews, tags, stores))
 
-    # 3. TVS (35 products)
-    tvs = build_category_templates("tvs", 35, TV_SPECS)
-    for idx, item in enumerate(tvs):
+    # 3. TVS (35)
+    for item in build_category_templates("tvs", 35, TV_SPECS):
         name, brand, mrp, price, rating, reviews, tags, stores = item
-        slug = slugify(name)
-        img_url = CATEGORY_IMAGES["tvs"][idx % len(CATEGORY_IMAGES["tvs"])]
-        products.append({
-            "id": f"tv-{idx+1:03d}",
-            "name": name,
-            "brand": brand,
-            "category": "tvs",
-            "slug": slug,
-            "imageUrl": img_url,
-            "rating": rating,
-            "reviewCount": reviews,
-            "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, 200 + idx),
-        })
+        raw_catalog.append((name, brand, "tvs", mrp, price, rating, reviews, tags, stores))
 
-    # 4. HEADPHONES (35 products)
-    headphones = build_category_templates("headphones", 35, HEADPHONE_SPECS)
-    for idx, item in enumerate(headphones):
+    # 4. HEADPHONES (35)
+    for item in build_category_templates("headphones", 35, HEADPHONE_SPECS):
         name, brand, mrp, price, rating, reviews, tags, stores = item
-        slug = slugify(name)
-        img_url = CATEGORY_IMAGES["headphones"][idx % len(CATEGORY_IMAGES["headphones"])]
-        products.append({
-            "id": f"hp-{idx+1:03d}",
-            "name": name,
-            "brand": brand,
-            "category": "headphones",
-            "slug": slug,
-            "imageUrl": img_url,
-            "rating": rating,
-            "reviewCount": reviews,
-            "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, 300 + idx),
-        })
+        raw_catalog.append((name, brand, "headphones", mrp, price, rating, reviews, tags, stores))
 
-    # 5. APPLIANCES (35 products)
-    appliances = build_category_templates("appliances", 35, APPLIANCE_SPECS)
-    for idx, item in enumerate(appliances):
+    # 5. APPLIANCES (35)
+    for item in build_category_templates("appliances", 35, APPLIANCE_SPECS):
         name, brand, mrp, price, rating, reviews, tags, stores = item
-        slug = slugify(name)
-        img_url = CATEGORY_IMAGES["appliances"][idx % len(CATEGORY_IMAGES["appliances"])]
-        products.append({
-            "id": f"app-{idx+1:03d}",
-            "name": name,
-            "brand": brand,
-            "category": "appliances",
-            "slug": slug,
-            "imageUrl": img_url,
-            "rating": rating,
-            "reviewCount": reviews,
-            "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, 400 + idx),
-        })
+        raw_catalog.append((name, brand, "appliances", mrp, price, rating, reviews, tags, stores))
 
-    # 6. FASHION (35 products)
-    fashion = build_category_templates("fashion", 35, FASHION_SPECS)
-    for idx, item in enumerate(fashion):
+    # 6. FASHION (35)
+    for item in build_category_templates("fashion", 35, FASHION_SPECS):
         name, brand, mrp, price, rating, reviews, tags, stores = item
-        slug = slugify(name)
-        img_url = CATEGORY_IMAGES["fashion"][idx % len(CATEGORY_IMAGES["fashion"])]
-        products.append({
-            "id": f"fsh-{idx+1:03d}",
-            "name": name,
-            "brand": brand,
-            "category": "fashion",
-            "slug": slug,
-            "imageUrl": img_url,
-            "rating": rating,
-            "reviewCount": reviews,
-            "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, 500 + idx),
-        })
+        raw_catalog.append((name, brand, "fashion", mrp, price, rating, reviews, tags, stores))
 
-    # 7. GROCERY (35 products)
-    grocery = build_category_templates("grocery", 35, GROCERY_SPECS)
-    for idx, item in enumerate(grocery):
+    # 7. GROCERY (35)
+    for item in build_category_templates("grocery", 35, GROCERY_SPECS):
         name, brand, mrp, price, rating, reviews, tags, stores = item
-        slug = slugify(name)
-        img_url = CATEGORY_IMAGES["grocery"][idx % len(CATEGORY_IMAGES["grocery"])]
-        products.append({
-            "id": f"gro-{idx+1:03d}",
-            "name": name,
-            "brand": brand,
-            "category": "grocery",
-            "slug": slug,
-            "imageUrl": img_url,
-            "rating": rating,
-            "reviewCount": reviews,
-            "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, 600 + idx),
-        })
+        raw_catalog.append((name, brand, "grocery", mrp, price, rating, reviews, tags, stores))
 
-    # 8. BOOKS (35 products)
-    books = build_category_templates("books", 35, BOOK_SPECS)
-    for idx, item in enumerate(books):
+    # 8. BOOKS (35)
+    for item in build_category_templates("books", 35, BOOK_SPECS):
         name, brand, mrp, price, rating, reviews, tags, stores = item
+        raw_catalog.append((name, brand, "books", mrp, price, rating, reviews, tags, stores))
+
+    products = []
+    # Map to hold family groupings
+    family_members = defaultdict(list)
+
+    for idx, (name, brand, category, mrp, price, rating, reviews, tags, stores) in enumerate(raw_catalog):
+        meta = parse_product_title(name, default_brand=brand)
         slug = slugify(name)
-        img_url = CATEGORY_IMAGES["books"][idx % len(CATEGORY_IMAGES["books"])]
-        products.append({
-            "id": f"bok-{idx+1:03d}",
+        cat_short = category[:3]
+        prod_id = f"{cat_short}-{idx+1:03d}"
+
+        # Strict Price Sanity Check
+        is_valid, reason = validate_price_sanity(price, mrp, category)
+        if not is_valid:
+            print(f"Warning: Seed item {name} violated sanity: {reason}. Adjusting.")
+            if mrp < price:
+                mrp = price
+            if (mrp - price) / mrp > 0.60:
+                mrp = round(price / 0.50)
+
+        offers = generate_offers(name, mrp, price, stores, category=category)
+        history = generate_history(price, 100 + idx)
+
+        product = {
+            "id": prod_id,
             "name": name,
             "brand": brand,
-            "category": "books",
+            "category": category,
             "slug": slug,
-            "imageUrl": img_url,
+            "imageUrl": "",  # Use branded dark placeholder fallback by default
+            "imageSource": "placeholder",
+            "imageVerified": False,
             "rating": rating,
             "reviewCount": reviews,
             "tags": tags,
-            "offers": generate_offers(name, mrp, price, stores),
-            "priceHistory": generate_history(price, 700 + idx),
-        })
+            "offers": offers,
+            "priceHistory": history,
+            "barcode": f"890100{idx+1000000:07d}",
+            "familyId": meta["family_slug"],
+            "familySlug": meta["family_slug"],
+            "familyName": meta["family_name"],
+            "series": meta["series"],
+            "cleanSearchQuery": meta["clean_search_query"],
+            "variantAttributes": {
+                "ram": meta["ram"],
+                "storage": meta["storage"],
+                "color": meta["color"],
+                "model": meta["model"],
+            },
+        }
+        products.append(product)
+        family_members[meta["family_slug"]].append(product)
 
-    # Assign GS1-compliant 13-digit EAN Barcodes to every product
-    for idx, p in enumerate(products):
-        p["barcode"] = f"890100{idx+1000000:07d}"
+    # Attach variant relationships across all family members
+    for p in products:
+        f_slug = p["familySlug"]
+        siblings = family_members[f_slug]
+        variant_list = []
+        for s in siblings:
+            variant_list.append({
+                "id": s["id"],
+                "name": s["name"],
+                "slug": s["slug"],
+                "ram": s["variantAttributes"].get("ram"),
+                "storage": s["variantAttributes"].get("storage"),
+                "color": s["variantAttributes"].get("color"),
+                "bestPrice": min(o["price"] for o in s["offers"]),
+            })
+        p["variants"] = variant_list
 
     return products
 
@@ -412,13 +420,21 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
             brand TEXT NOT NULL,
             category TEXT NOT NULL,
             slug TEXT NOT NULL,
-            image_url TEXT NOT NULL,
+            image_url TEXT,
+            image_source TEXT DEFAULT 'placeholder',
+            image_verified INTEGER DEFAULT 0,
             rating REAL NOT NULL,
             review_count INTEGER NOT NULL,
             tags TEXT,
             best_price INTEGER,
             mrp INTEGER,
-            barcode TEXT
+            barcode TEXT,
+            family_id TEXT,
+            family_slug TEXT,
+            family_name TEXT,
+            series TEXT,
+            variant_attributes TEXT,
+            clean_search_query TEXT
         )
     """)
 
@@ -437,6 +453,9 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
             seller_rating REAL NOT NULL,
             url TEXT NOT NULL,
             last_updated TEXT NOT NULL,
+            data_source TEXT DEFAULT 'demo',
+            is_demo INTEGER DEFAULT 1,
+            verified INTEGER DEFAULT 0,
             FOREIGN KEY (product_id) REFERENCES products(id)
         )
     """)
@@ -456,8 +475,11 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
         best_price = min(o["price"] for o in p["offers"])
         mrp = max(o["mrp"] for o in p["offers"])
         cur.execute(
-            """INSERT INTO products (id, name, brand, category, slug, image_url, rating, review_count, tags, best_price, mrp, barcode)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO products (
+                id, name, brand, category, slug, image_url, image_source, image_verified,
+                rating, review_count, tags, best_price, mrp, barcode,
+                family_id, family_slug, family_name, series, variant_attributes, clean_search_query
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 p["id"],
                 p["name"],
@@ -465,19 +487,30 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
                 p["category"],
                 p["slug"],
                 p["imageUrl"],
+                p.get("imageSource", "placeholder"),
+                1 if p.get("imageVerified") else 0,
                 p["rating"],
                 p["reviewCount"],
                 json.dumps(p["tags"]),
                 best_price,
                 mrp,
                 p["barcode"],
+                p.get("familyId"),
+                p.get("familySlug"),
+                p.get("familyName"),
+                p.get("series"),
+                json.dumps(p.get("variantAttributes", {})),
+                p.get("cleanSearchQuery"),
             ),
         )
 
         for o in p["offers"]:
             cur.execute(
-                """INSERT INTO offers (product_id, store, price, mrp, discount_pct, shipping, total_price, in_stock, delivery_days, seller_rating, url, last_updated)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO offers (
+                    product_id, store, price, mrp, discount_pct, shipping, total_price,
+                    in_stock, delivery_days, seller_rating, url, last_updated,
+                    data_source, is_demo, verified
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     p["id"],
                     o["store"],
@@ -491,6 +524,9 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
                     o["seller_rating"],
                     o["url"],
                     o["last_updated"],
+                    o.get("dataSource", "demo"),
+                    1 if o.get("is_demo") else 0,
+                    1 if o.get("verified") else 0,
                 ),
             )
 
@@ -510,12 +546,20 @@ if __name__ == "__main__":
     products = generate_all_products()
     print(f"Generated {len(products)} products across 8 categories.")
 
-    # Save to catalog.json
     out_dir = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(out_dir, "catalog.json")
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(products, f, indent=2)
     print(f"Saved catalog to {json_path}")
+
+    # Also update frontend catalog
+    frontend_catalog = os.path.abspath(
+        os.path.join(out_dir, "..", "..", "..", "frontend", "src", "data", "catalog.json")
+    )
+    if os.path.exists(os.path.dirname(frontend_catalog)):
+        with open(frontend_catalog, "w", encoding="utf-8") as f:
+            json.dump(products, f, indent=2)
+        print(f"Synced catalog to {frontend_catalog}")
 
     # Seed shoppilot.db
     backend_root = os.path.abspath(os.path.join(out_dir, "..", ".."))
