@@ -80,6 +80,12 @@ const TYPO_SYNONYMS: Record<string, string> = {
   earphone: "headphones",
   headphone: "headphones",
   bravia: "sony bravia",
+  laptop: "laptops",
+  tv: "tvs",
+  mobile: "mobiles",
+  phone: "mobiles",
+  book: "books",
+  appliance: "appliances",
 };
 
 function levenshteinDistance(s1: string, s2: string): number {
@@ -311,6 +317,10 @@ export class MockConnector {
     }
 
     return scoredItems.map((item) => item.product);
+  }
+
+  getAllProducts(): Product[] {
+    return [...this.products];
   }
 
   getProduct(id: string): Product | null {

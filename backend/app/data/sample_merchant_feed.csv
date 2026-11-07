@@ -1,0 +1,7 @@
+product_id,barcode,product_name,store,price,mrp,delivery_days,seller_rating,in_stock,shipping_fee,region,currency,url
+mob-001,8901001000000,Realme 12 Pro+ 5G (Submarine Blue 256GB),Tata CLiQ,22499,29999,2,4.6,true,0,IN,INR,https://www.tatacliq.com/realme-12-pro-plus-5g-256gb
+mob-006,8901001000005,Realme Narzo 70 Pro 5G (Glass Green 256GB),Tata CLiQ,18499,24999,3,4.4,true,0,IN,INR,https://www.tatacliq.com/realme-narzo-70-pro-5g
+mob-011,8901001000010,Samsung Galaxy S24 Ultra 5G (Titanium Gray 512GB),Vijay Sales,126999,134999,1,4.8,true,0,IN,INR,https://www.vijaysales.com/samsung-galaxy-s24-ultra-512gb
+mob-021,8901001000020,Apple iPhone 15 (128 GB) - Black,Croma,66990,79900,1,4.7,true,0,IN,INR,https://www.croma.com/apple-iphone-15-128gb-black
+mob-031,8901001000030,OnePlus 12 5G (Silky Black 256GB),Reliance Digital,61499,69999,2,4.5,true,0,IN,INR,https://www.reliancedigital.in/oneplus-12-5g-256gb
+lap-001,8901001000060,Apple MacBook Air M2 Chip (13.6-inch 8GB 256GB),Tata CLiQ,87990,99900,2,4.9,true,0,IN,INR,https://www.tatacliq.com/apple-macbook-air-m2-8gb-256gb

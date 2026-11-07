@@ -80,3 +80,43 @@
   4. `/compare-specs` displays 4 products side-by-side with full specifications and store prices.
   5. UserNav displays Gokul profile with active wishlist and sign-out capabilities.
 - Acceptance screenshots attached to artifact directory.
+
+## Phase C — Real Data Pipeline & Store Connectors ✅ COMPLETE
+- [x] **StoreConnector Interface & Connector Skeletons**:
+  - Standard `StoreConnector` interface in Python (`backend/app/connectors/base.py`) and TypeScript (`frontend/src/lib/connectors/base.ts`) with `search()`, `get_product()`, `get_by_url()`, `get_offers()`, and `refresh()`.
+  - `MockStoreConnector` serves as default offline provider with 315 products, 917 store offers, and 12-month history.
+  - Real connector skeletons for Amazon Product Advertising API (PA-API v5), Flipkart Affiliate API, and Generic Merchant CSV/XML Feeds (Cuelinks, Admitad, vCommission).
+  - Robust transient error handling: `execute_with_retry_and_backoff` with exponential backoff on HTTP 429 rate limits, network timeouts, and 5xx responses.
+  - Zero-credentials safe fallback: When external keys are missing or invalid, connectors automatically and safely fall back to `MockStoreConnector` without crashing user-facing search or compare pages.
+- [x] **Merchant Feed Ingestion Engine (`feed_importer.py` & `sample_merchant_feed.csv`)**:
+  - Parses merchant CSV/XML feeds and matches products by GS1 barcode (`8901001...`), product ID, or product name.
+  - Merges new external store offers (e.g. Tata CLiQ and Croma) into existing products and recalculates real-time lowest price and discount percentages.
+- [x] **Store Enablement / Disablement (`mock.py` & `/api/admin/stores`)**:
+  - Real-time store toggling: Disabling a store (e.g. "Tata CLiQ") dynamically removes all its offers from search and compare pages.
+  - Re-enabling a store instantly restores its offers.
+- [x] **Price Pipeline Scheduler (`scheduler.py`)**:
+  - Tiered scheduling: Priority Tier 1 (tracked by alerts or popular products with >=5,000 reviews) refreshed frequently; Tier 2 (long tail) on scheduled cadence.
+  - Price change detection: Records a new `PricePoint` only when the store price changes; skips recording redundant PricePoints when prices are unchanged.
+- [x] **Affiliate Link Builder & Outbound Click Tracking (`affiliate.py`)**:
+  - Dedicated `AffiliateLinkBuilder` appending official associate tags (Amazon `tag=shoppilot-21`, Flipkart `affid=shoppilot`, Cuelinks redirect wrapper).
+  - Outbound click logging on `/api/affiliate/click` and `/go/[offerId]`.
+- [x] **Multi-Currency & Regional Ready (`utils.py`)**:
+  - Default: INR (₹). USD ($) and EUR (€) exchange rates and conversion functions ready with per-store region tags (`IN`).
+- [x] **Admin Control Center (`/admin` & `/api/admin/*`)**:
+  - Admin role dashboard (`/admin`) with store enablement switches, connector telemetry & health indicators (`HEALTHY`, `FALLBACK_ACTIVE`, `ERROR`), "Trigger Sync" and "Simulate 429 Error" actions, merchant CSV feed upload form with sample feed loader, and scheduler metrics.
+  - Fault tolerance: Connector failures display cleanly in Admin telemetry without crashing user-facing search, deals, or compare pages.
+- [x] **Verification & Acceptance**:
+  - **49/49 Pytest backend tests passing** (`pytest backend/tests -v`).
+  - **11/11 Next.js 14 routes compiled with 0 TypeScript/lint errors**.
+  - **End-to-End Playwright Acceptance Test (`verify_phase_c.py`) completed**:
+    1. Sample merchant CSV feed loaded and merged into `mob-001` (Tata CLiQ offer at ₹22,499).
+    2. Disabling Tata CLiQ removes the offer from `/compare?id=mob-001`.
+    3. Simulating 429 error on Amazon PA-API displays the error badge in Admin while `/search?q=realme` continues working with 0 crash.
+    4. Price pipeline scheduler records initial PricePoints and skips unchanged prices.
+  - Acceptance screenshots captured and saved to artifacts:
+    - `phase_c_admin_dashboard.png`: Admin Control Center with store toggles, connector telemetry, and feed ingestion.
+    - `phase_c_merged_offers_compare.png`: Compare page displaying merged Tata CLiQ offer alongside Amazon and Flipkart.
+    - `phase_c_store_disabled_compare.png`: Compare page verifying Tata CLiQ offer is removed when disabled.
+    - `phase_c_admin_error_tolerance.png`: Admin dashboard showing simulated 429 error without page crash.
+    - `phase_c_search_via_connector.png`: User search functioning seamlessly via connector pipeline.
+

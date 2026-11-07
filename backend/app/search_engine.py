@@ -32,8 +32,18 @@ TYPO_SYNONYMS = {
     "moto": "motorola",
     "mackbook": "macbook",
     "mcbook": "macbook",
+    "laptop": "laptops",
+    "notebook": "laptops",
+    "tv": "tvs",
+    "television": "tvs",
+    "mobile": "mobiles",
+    "phone": "mobiles",
+    "phones": "mobiles",
     "earphone": "headphones",
+    "earphones": "headphones",
     "headphone": "headphones",
+    "appliance": "appliances",
+    "book": "books",
     "bravia": "sony bravia",
 }
 

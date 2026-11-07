@@ -11,7 +11,7 @@ import logging
 import math
 import os
 import re
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from typing import Dict, List, Any, Optional
 from contextlib import asynccontextmanager
 from urllib.parse import quote_plus
@@ -26,6 +26,10 @@ from app.mock_store.router import router as mock_store_router
 from app.worker.queue import job_manager
 from app.notifications.dispatcher import dispatcher
 from app.search_engine import search_catalog_fuzzy
+from app.connectors.registry import connector_registry
+from app.connectors.scheduler import price_scheduler
+from app.connectors.affiliate import affiliate_builder
+from app.connectors.utils import convert_price
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("ShopPilot.Main")
@@ -278,8 +282,8 @@ async def search_products(
     Returns matching products with offers from multiple stores.
     Users click through to the store to complete their purchase.
     """
-    results = search_catalog_fuzzy(
-        catalog=PRODUCTS,
+    connector = connector_registry.get_active_connector()
+    results = connector.search(
         query=q,
         category=category if category else None,
         brand=brand if brand else None,
@@ -292,8 +296,19 @@ async def search_products(
 
     return {
         "query": q,
+        "connector": connector.name,
         "total": len(results),
         "results": results[:limit],
+    }
+
+
+@app.get("/api/connectors")
+async def list_connectors():
+    """List available pluggable store connectors and active status."""
+    return {
+        "use_mock_data": connector_registry.use_mock,
+        "active_connector": connector_registry.get_active_connector().name,
+        "connectors": connector_registry.list_connectors(),
     }
 
 
@@ -302,7 +317,9 @@ async def get_trending(
     limit: int = Query(default=20, le=50, description="Number of trending products"),
 ):
     """Return top trending products sorted by review count (popularity proxy)."""
-    sorted_products = sorted(PRODUCTS, key=lambda x: x["review_count"], reverse=True)
+    active_conn = connector_registry.get_active_connector()
+    prods = getattr(active_conn, "products", PRODUCTS)
+    sorted_products = sorted(prods, key=lambda x: x.get("review_count", 0), reverse=True)
     return {
         "total": len(sorted_products),
         "results": sorted_products[:limit],
@@ -311,16 +328,177 @@ async def get_trending(
 
 
 @app.get("/api/products/{product_id}")
-async def get_product(product_id: str):
-    """Get a single product with all store offers and price history."""
-    product = next((p for p in PRODUCTS if p["id"] == product_id or p.get("legacy_id") == product_id), None)
+async def get_product(
+    product_id: str,
+    currency: str = Query(default="INR", description="Preferred display currency: INR, USD, EUR"),
+):
+    """Get a single product with all active store offers, price history, and currency conversion."""
+    active_conn = connector_registry.get_active_connector()
+    product = active_conn.get_product(product_id)
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        # Fallback to in-memory PRODUCTS
+        product = next((p for p in PRODUCTS if p["id"] == product_id or p.get("legacy_id") == product_id), None)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+    p_dict = dict(product)
     if product.get("legacy_id") == product_id:
-        p_copy = dict(product)
-        p_copy["id"] = product_id
-        return p_copy
-    return product
+        p_dict["id"] = product_id
+
+    # Format outbound links with retailer affiliate tracking
+    formatted_offers = []
+    for off in p_dict.get("offers", []):
+        off_copy = dict(off)
+        off_copy["raw_url"] = off_copy.get("url", "")
+        off_copy["affiliate_url"] = affiliate_builder.build_affiliate_url(
+            raw_url=off_copy.get("url", ""),
+            store_name=off_copy.get("store", "Store"),
+            subid=p_dict.get("id", "item"),
+        )
+        if currency.upper() != "INR":
+            off_copy["converted"] = convert_price(off_copy.get("price", 0), currency)
+        formatted_offers.append(off_copy)
+    p_dict["offers"] = formatted_offers
+
+    if currency.upper() != "INR":
+        p_dict["best_price_converted"] = convert_price(p_dict.get("best_price", 0), currency)
+        p_dict["mrp_converted"] = convert_price(p_dict.get("mrp", 0), currency)
+
+    return p_dict
+
+
+# ─── Admin Control Center Endpoints (Phase C) ────────────────────────────────
+
+class ToggleStoreRequest(BaseModel):
+    store: str
+    enabled: bool
+
+class TriggerSyncRequest(BaseModel):
+    simulate_failure: Optional[bool] = False
+
+class UploadFeedRequest(BaseModel):
+    feed_csv: str
+
+class RunSchedulerRequest(BaseModel):
+    tier: Optional[str] = "all"
+    shift_sample_price: Optional[bool] = False
+
+class LogClickRequest(BaseModel):
+    store: str
+    product_id: Optional[str] = ""
+    product_name: Optional[str] = ""
+    url: str
+
+click_logs: List[Dict[str, Any]] = []
+
+
+@app.get("/api/admin/stores")
+async def list_admin_stores():
+    """List all detected stores and their active enabled/disabled status."""
+    stores = connector_registry.mock_connector.get_known_stores()
+    return {
+        "total_stores": len(stores),
+        "stores": stores,
+        "disabled_stores": list(connector_registry.mock_connector.disabled_stores),
+    }
+
+
+@app.post("/api/admin/stores/toggle")
+async def toggle_store(payload: ToggleStoreRequest):
+    """Enable or disable offers from a specific store across the platform."""
+    if payload.enabled:
+        connector_registry.mock_connector.enable_store(payload.store)
+    else:
+        connector_registry.mock_connector.disable_store(payload.store)
+
+    return {
+        "status": "SUCCESS",
+        "store": payload.store,
+        "is_enabled": payload.enabled,
+        "disabled_stores": list(connector_registry.mock_connector.disabled_stores),
+    }
+
+
+@app.get("/api/admin/sync-status")
+async def get_connector_sync_status():
+    """
+    Returns live sync health, last error, and sync timestamps for all connectors.
+    Never crashes pages if an individual connector has failed.
+    """
+    return {
+        "connectors": connector_registry.list_connectors(),
+        "summary": connector_registry.sync_history,
+    }
+
+
+@app.post("/api/admin/connectors/{connector_key}/trigger-sync")
+async def trigger_connector_sync(connector_key: str, payload: TriggerSyncRequest):
+    """
+    Triggers refresh of a connector. If simulate_failure is True, records error
+    in admin dashboard while preserving user search/compare operations safely.
+    """
+    res = connector_registry.trigger_sync(connector_key, simulate_failure=payload.simulate_failure)
+    return res
+
+
+@app.post("/api/admin/feed/upload")
+async def upload_merchant_feed(payload: UploadFeedRequest):
+    """
+    Upload and merge merchant CSV feed into existing canonical products.
+    Matches barcode, product_id, or name and updates offers.
+    """
+    if not payload.feed_csv.strip():
+        raise HTTPException(status_code=400, detail="Feed CSV content cannot be empty")
+
+    res = connector_registry.feed_connector.parse_and_merge_csv(payload.feed_csv)
+    return res
+
+
+@app.get("/api/admin/scheduler")
+async def get_scheduler_status():
+    """Returns price pipeline scheduler metrics: PricePoints recorded vs skipped."""
+    return price_scheduler.get_stats()
+
+
+@app.post("/api/admin/scheduler/run")
+async def run_pipeline_scheduler(payload: RunSchedulerRequest):
+    """
+    Executes a price collection cycle for Tier 1 / Tier 2 products.
+    Records PricePoint if changed; skips unchanged prices.
+    """
+    shifts = None
+    if payload.shift_sample_price:
+        # Simulate price drop on mob-001 (Realme 12 Pro) to demonstrate change detection
+        shifts = {"mob-001": 22999}
+
+    summary = price_scheduler.run_cycle(
+        price_alerts=price_alerts,
+        force_tier=payload.tier,
+        mock_price_shifts=shifts,
+    )
+    return summary
+
+
+@app.post("/api/affiliate/click")
+async def log_affiliate_click(payload: LogClickRequest):
+    """Log outbound affiliate click-outs."""
+    affiliate_url = affiliate_builder.build_affiliate_url(payload.url, payload.store)
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "store": payload.store,
+        "product_id": payload.product_id,
+        "product_name": payload.product_name,
+        "affiliate_url": affiliate_url,
+    }
+    click_logs.append(log_entry)
+    logger.info(f"[Affiliate Click] Store: {payload.store} | Product: {payload.product_name} | Target: {affiliate_url}")
+    return {"status": "LOGGED", "affiliate_url": affiliate_url}
+
+
+@app.get("/api/affiliate/clicks")
+async def get_affiliate_clicks():
+    """Retrieve logged outbound affiliate clicks."""
+    return {"total_clicks": len(click_logs), "clicks": click_logs[-50:]}
 
 
 # ─── Price-Drop Alerts System ─────────────────────────────────────────────────

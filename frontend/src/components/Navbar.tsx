@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Sparkles, TrendingDown, Scale, ShieldCheck, Heart, Bot, Columns } from "lucide-react";
+import { Sparkles, TrendingDown, Scale, ShieldCheck, Heart, Bot, Columns, Settings } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import UserNav from "@/components/UserNav";
 
@@ -74,6 +74,15 @@ export default function Navbar() {
           >
             <Bot className="w-3.5 h-3.5" />
             <span className="hidden md:inline">AI Advisor</span>
+          </Link>
+
+          <Link
+            href="/admin"
+            className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-white hover:bg-emerald-600/30 px-2.5 py-2 rounded-xl border border-emerald-500/30 transition-all duration-200"
+            title="ShopPilot Pipeline Admin"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">Admin</span>
           </Link>
 
           {/* User Account Nav Pill */}
