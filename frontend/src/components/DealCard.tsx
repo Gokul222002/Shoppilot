@@ -6,17 +6,20 @@ import { Check, Star, ExternalLink, ShoppingBag } from "lucide-react";
 export interface DealItem {
   id?: string;
   title: string;
-  price: number;
+  price?: number;
+  current_price?: number;
   original_price?: number;
   discount_pct?: number;
   discount_percentage?: number;
   rating?: number;
   reviews?: number;
+  review_count?: number;
   badge?: string;
   currency?: string;
   store?: string;
   url?: string;
   product_url?: string;
+  buy_link?: string;
   image_url?: string;
   image?: string;
   specs?: string[];
@@ -86,13 +89,36 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, isInCart = false }) =>
   const storeName = deal.store || "Amazon.in";
   const theme = STORE_THEMES[storeName] || STORE_THEMES["Amazon.in"];
   
-  // Use direct product PDP URL; ensure target="_blank"
-  const productUrl = deal.product_url || deal.url || `https://www.amazon.in/s?k=${encodeURIComponent(deal.title)}`;
+  // Safe price & review fields
+  const price = deal.current_price ?? deal.price ?? 999;
+  const reviewCount = deal.review_count ?? deal.reviews;
+  const discountPct = deal.discount_pct ?? deal.discount_percentage ?? 0;
   const displayImage = deal.image_url || deal.image;
-  const discountPct = deal.discount_pct || deal.discount_percentage || 0;
 
-  const savings = deal.original_price && deal.original_price > deal.price
-    ? Math.round(deal.original_price - deal.price).toLocaleString("en-IN")
+  // Sanitize outbound URL: eliminate broken 404 links & fake mock ASINs
+  let rawUrl = deal.product_url || deal.buy_link || deal.url || "";
+  let productUrl = rawUrl;
+  if (!productUrl || productUrl.includes("9482X") || productUrl.includes("fake") || productUrl.includes("undefined")) {
+    const cleanQ = encodeURIComponent(deal.title);
+    if (storeName === "Flipkart") {
+      productUrl = `https://www.flipkart.com/search?q=${cleanQ}`;
+    } else if (storeName === "Myntra") {
+      productUrl = `https://www.myntra.com/${cleanQ}`;
+    } else if (storeName === "Croma") {
+      productUrl = `https://www.croma.com/searchB?q=${cleanQ}`;
+    } else if (storeName === "Tata CLiQ") {
+      productUrl = `https://www.tatacliq.com/search/?searchCategory=all&text=${cleanQ}`;
+    } else if (storeName === "Reliance Digital") {
+      productUrl = `https://www.reliancedigital.in/search?q=${cleanQ}`;
+    } else if (storeName === "Nykaa") {
+      productUrl = `https://www.nykaa.com/search/result/?q=${cleanQ}`;
+    } else {
+      productUrl = `https://www.amazon.in/s?k=${cleanQ}`;
+    }
+  }
+
+  const savings = deal.original_price && deal.original_price > price
+    ? Math.round(deal.original_price - price).toLocaleString("en-IN")
     : null;
 
   return (
@@ -174,9 +200,9 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, isInCart = false }) =>
               <Star className="w-3 h-3 fill-copper-500 text-copper-500" />
               <span>{deal.rating}</span>
             </div>
-            {deal.reviews && (
+            {reviewCount && (
               <span className="text-alpine-400 text-[10px]">
-                ({deal.reviews.toLocaleString("en-IN")} reviews)
+                ({reviewCount.toLocaleString("en-IN")} reviews)
               </span>
             )}
           </div>
@@ -199,9 +225,9 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, isInCart = false }) =>
         <div>
           <div className="flex items-baseline gap-1.5">
             <span className="font-display text-xl font-black text-sand-100">
-              {currencySymbol}{deal.price.toLocaleString("en-IN")}
+              {currencySymbol}{price.toLocaleString("en-IN")}
             </span>
-            {deal.original_price && deal.original_price > deal.price && (
+            {deal.original_price && deal.original_price > price && (
               <span className="text-xs text-alpine-500 line-through font-mono">
                 {currencySymbol}{Math.round(deal.original_price).toLocaleString("en-IN")}
               </span>

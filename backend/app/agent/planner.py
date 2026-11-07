@@ -131,17 +131,22 @@ class ShoppingMissionPlanner:
                 discount_pct = int(round((1 - price / orig_price) * 100)) if orig_price > price else 20
 
                 deal_dict = {
+                    "id": f"amz-{deals_found+1:02d}",
                     "title": t_text,
                     "price": price,
+                    "current_price": price,
                     "original_price": orig_price,
+                    "discount_pct": discount_pct,
                     "discount_percentage": discount_pct,
                     "rating": rating,
                     "reviews": 3200,
+                    "review_count": 3200,
                     "badge": "AMAZON CHOICE",
                     "currency": "₹",
                     "store": "Amazon.in",
                     "url": full_url,
                     "product_url": full_url,
+                    "buy_link": full_url,
                     "image_url": img_url,
                     "image": img_url,
                     "specs": [f"Matches '{self.keyword}'", "Fulfilled by Amazon", "Real-Time Verified Offer"]
@@ -159,17 +164,22 @@ class ShoppingMissionPlanner:
                     target_link = item.get("product_url") or item.get("url") or f"https://www.flipkart.com/search?q={urllib.parse.quote_plus(self.keyword)}"
                     target_img = item.get("image_url") or item.get("image", "")
                     d_dict = {
+                        "id": item.get("id", f"deal-{len(self.extracted_deals)+1:02d}"),
                         "title": item["title"],
                         "price": item["price"],
+                        "current_price": item["price"],
                         "original_price": item.get("original_price", round(item["price"] * 1.35, 2)),
+                        "discount_pct": item.get("discount_pct", 25),
                         "discount_percentage": item.get("discount_pct", 25),
                         "rating": item.get("rating", 4.5),
                         "reviews": item.get("reviews", 5000),
+                        "review_count": item.get("reviews", 5000),
                         "badge": item.get("badge", "VERIFIED DEAL"),
                         "currency": "₹",
                         "store": item.get("store", "Flipkart"),
                         "url": target_link,
                         "product_url": target_link,
+                        "buy_link": target_link,
                         "image_url": target_img,
                         "image": target_img,
                         "specs": item.get("specs", [])
@@ -254,17 +264,22 @@ class ShoppingMissionPlanner:
                 target_link = item.get("product_url") or item.get("url") or f"https://www.amazon.in/s?k={urllib.parse.quote_plus(self.keyword)}"
                 target_img = item.get("image_url") or item.get("image", "")
                 deal_dict = {
+                    "id": item.get("id", f"deal-{len(self.extracted_deals)+1:02d}"),
                     "title": item["title"],
                     "price": item["price"],
+                    "current_price": item["price"],
                     "original_price": item.get("original_price", round(item["price"] * 1.35, 2)),
+                    "discount_pct": item.get("discount_pct", 25),
                     "discount_percentage": item.get("discount_pct", 25),
                     "rating": item.get("rating", 4.5),
                     "reviews": item.get("reviews", 5000),
+                    "review_count": item.get("reviews", 5000),
                     "badge": item.get("badge", "VERIFIED DEAL"),
                     "currency": "₹",
                     "store": item.get("store", "Amazon.in"),
                     "url": target_link,
                     "product_url": target_link,
+                    "buy_link": target_link,
                     "image_url": target_img,
                     "image": target_img,
                     "specs": item.get("specs", [])
