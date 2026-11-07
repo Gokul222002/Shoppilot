@@ -45,3 +45,31 @@ def test_mock_webhook_endpoint():
     response = client.post("/api/webhook/mock", json=payload)
     assert response.status_code == 200
     assert response.json()["received"] is True
+
+
+def test_api_search_endpoint():
+    response = client.get('/api/search?q=phone')
+    assert response.status_code == 200
+    data = response.json()
+    assert 'results' in data
+    assert data['total'] > 0
+
+def test_api_search_category_filter():
+    response = client.get('/api/search?category=laptops')
+    assert response.status_code == 200
+    data = response.json()
+    for item in data['results']:
+        assert item['category'] == 'laptops'
+
+def test_api_trending_products():
+    response = client.get('/api/products/trending?limit=5')
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data['results']) <= 5
+
+def test_api_single_product_detail():
+    response = client.get('/api/products/ph-001')
+    assert response.status_code == 200
+    data = response.json()
+    assert data['id'] == 'ph-001'
+    assert 'price_history' in data

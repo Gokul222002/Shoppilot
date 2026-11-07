@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "ShopPilot | Autonomous Multimodal Browser Agent",
-  description: "Autonomous Multimodal Browser Agent for Automated Deal Hunting and Checkout Simulations",
+  title: "ShopPilot — Compare Prices Across India's Top Stores",
+  description:
+    "ShopPilot helps you find the lowest prices on phones, laptops, fans, earphones and more — across Amazon.in, Flipkart, Croma, Myntra and Tata CLiQ. No cart. No checkout. Pure price comparison.",
 };
 
 export default function RootLayout({
@@ -13,8 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-slate-950 text-slate-100 min-h-screen selection:bg-indigo-500 selection:text-white">
-        {children}
+      <body className="bg-gray-950 text-gray-100 min-h-screen antialiased selection:bg-orange-500 selection:text-white flex flex-col">
+        <Navbar />
+        <main className="flex-1">{children}</main>
+        <Footer />
       </body>
     </html>
   );
