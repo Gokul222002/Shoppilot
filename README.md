@@ -240,3 +240,24 @@ Tested across **100 labeled test pairs** (50 positive pairs of identical items a
 1. **Zero Contamination Priority**: In multi-store price comparison, merging two distinct products (e.g. an iPhone 14 with an iPhone 15, or a 128GB with a 256GB phone) destroys user trust by claiming an artificial 40% fake discount. At threshold **0.85**, **Precision is 100% (0 False Positives)**.
 2. **Review Queue Routing for Borderline Pairs**: Pairs scoring between `0.50` and `0.84` are not dropped—they are safely dispatched to the **Admin Review Queue** for human verification instead of corrupting catalog integrity.
 3. **F1 Optimization**: The 0.85 threshold achieves the optimal balance between high precision (1.0000) and recall while delegating uncertain pairs to human review.
+
+
+---
+
+### Phase E ML Evaluation: Price Forecaster Backtest Benchmark Report
+
+Tested on **held-out historical price points** across **50 products** over a **30-day test horizon** (350 test instances):
+
+| Metric | ShopPilot ML Forecaster | Naive Baseline (Tomorrow = Today) | Improvement |
+| :--- | :--- | :--- | :--- |
+| **MAE (Mean Absolute Error)** | **₹1,953.83** | ₹998.65 | -95.65% |
+| **MAPE (Mean Absolute % Error)** | **5.91%** | 2.84% | -3.07% |
+| **Festival Dip Anticipation** | Active (Calendar Proximity) | Zero (Lagging) | Proactive Alert |
+| **Day-of-Week Flash Modulation** | Active (Fri-Sun multiplier) | Zero (Static) | Dynamic |
+
+#### Benchmark Finding & Fallback Policy:
+- **Observation:** In daily retail commerce, prices remain identical on most consecutive non-sale days. Consequently, the naive persistence baseline ($\hat{y}_{t+k} = y_t$) achieves minimal static error during quiet periods.
+- **Rule-Based Fallback Adherence:** In strict adherence to our architecture guidelines (*"If the model does not beat the baseline, say so and fall back to rule-based advice"*), ShopPilot uses a hybrid policy:
+  1. For daily price forecasting, it falls back to **rule-based advice** anchored to the **30-day rolling median** and historical all-time floors.
+  2. For upcoming shopping events (BBD, Great Indian Festival, Diwali), the event calendar provides proactive buy/wait advice.
+  3. When history has **fewer than 30 days**, the system safely returns `"Not enough data yet"`.

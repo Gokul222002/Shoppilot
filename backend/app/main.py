@@ -32,6 +32,10 @@ from app.connectors.affiliate import affiliate_builder
 from app.connectors.utils import convert_price
 from app.ml.vector_engine import vector_engine
 from app.matching import product_matcher
+from app.ml.calendar import sale_calendar
+from app.ml.price_forecaster import price_forecaster
+from app.ml.deal_intelligence import deal_intelligence
+from app.ml.anomaly import anomaly_detector
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("ShopPilot.Main")
@@ -439,6 +443,136 @@ async def get_people_also_compared(product_id: str, limit: int = Query(default=4
         "count": len(compared),
         "people_also_compared": compared,
     }
+
+
+# ─── Price Prediction & Deal Intelligence (Phase E) ──────────────────────────
+
+@app.get("/api/products/{product_id}/forecast")
+async def get_product_price_forecast(product_id: str):
+    """
+    7-day and 30-day price trajectory forecast using history, seasonality,
+    Indian shopping festival calendar, and day-of-week modulation.
+    Provides BUY NOW vs WAIT advice with confidence score and reason.
+    Returns 'Not enough data yet' if history < 30 days.
+    """
+    product = next((p for p in PRODUCTS if p["id"] == product_id or p.get("legacy_id") == product_id), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    history = product.get("priceHistory") or product.get("price_history", [])
+    forecast = price_forecaster.forecast_product_price(
+        product_id=product["id"],
+        price_history=history,
+        current_best_price=product.get("best_price"),
+        category=product.get("category"),
+    )
+    return forecast
+
+
+@app.get("/api/products/{product_id}/intelligence")
+async def get_product_deal_intelligence(product_id: str):
+    """
+    Deal authenticity intelligence using rolling 60-day median baseline instead of fake MRP.
+    Flags artificial pre-sale price inflation with exact days and percentage evidence.
+    """
+    product = next((p for p in PRODUCTS if p["id"] == product_id or p.get("legacy_id") == product_id), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    history = product.get("priceHistory") or product.get("price_history", [])
+    analysis = deal_intelligence.analyze_deal_quality(
+        current_price=product.get("best_price", 0),
+        mrp=product.get("mrp", 0),
+        price_history=history,
+    )
+    return analysis
+
+
+@app.get("/api/deals")
+async def get_deals_feed(
+    min_discount: int = Query(default=5, description="Minimum real discount %"),
+    category: Optional[str] = Query(default=None, description="Filter by category"),
+    limit: int = Query(default=30, le=100),
+):
+    """
+    Verified deals feed.
+    Uses DealIntelligence to ensure discounts are genuine relative to rolling median,
+    and holds pricing errors (>70% drop) out of the feed until verified.
+    """
+    deals = []
+    active_conn = connector_registry.get_active_connector()
+    prods = getattr(active_conn, "products", PRODUCTS)
+
+    for p in prods:
+        if category and p.get("category", "").lower() != category.lower():
+            continue
+
+        best_price = p.get("best_price", 0)
+        history = p.get("priceHistory") or p.get("price_history", [])
+
+        # Check for extreme price anomalies (>70% drop below median)
+        analysis = deal_intelligence.analyze_deal_quality(
+            current_price=best_price,
+            mrp=p.get("mrp", 0),
+            price_history=history,
+        )
+
+        rolling_med = analysis.get("rolling_median", best_price)
+        anomaly_check = anomaly_detector.check_offer(
+            product_id=p["id"],
+            product_name=p["name"],
+            store=p.get("offers", [{}])[0].get("store", "Store") if p.get("offers") else "Store",
+            offer_price=best_price,
+            rolling_median=rolling_med,
+        )
+
+        # Hold suspicious anomalies out of public deals feed
+        if anomaly_check["held_for_verification"]:
+            continue
+
+        # Include if genuine deal or pre-sale warning
+        real_disc = analysis.get("real_discount_pct", 0)
+        if real_disc >= min_discount or analysis.get("assessment") == "GENUINE":
+            p_copy = dict(p)
+            p_copy["deal_intelligence"] = analysis
+            deals.append(p_copy)
+
+    # Sort by real discount percentage
+    deals.sort(key=lambda x: x.get("deal_intelligence", {}).get("real_discount_pct", 0), reverse=True)
+    return {
+        "total": len(deals),
+        "deals": deals[:limit],
+    }
+
+
+@app.get("/api/admin/anomalies")
+async def get_admin_anomalies(status: Optional[str] = None):
+    """Lists held suspicious pricing errors (>70% drop below median)."""
+    anoms = anomaly_detector.get_held_anomalies(status=status)
+    return {
+        "total": len(anoms),
+        "held_count": len([a for a in anoms if a["status"] == "HELD_FOR_VERIFICATION"]),
+        "anomalies": anoms,
+    }
+
+
+@app.post("/api/admin/anomalies/{anomaly_id}/approve")
+async def approve_anomaly_offer(anomaly_id: str):
+    """Approve held anomalous offer for public deals feed."""
+    item = anomaly_detector.resolve_anomaly(anomaly_id, "APPROVED")
+    if not item:
+        raise HTTPException(status_code=404, detail="Anomaly record not found")
+    return {"status": "SUCCESS", "action": "APPROVED", "item": item}
+
+
+@app.post("/api/admin/anomalies/{anomaly_id}/dismiss")
+async def dismiss_anomaly_offer(anomaly_id: str):
+    """Dismiss held anomaly offer."""
+    item = anomaly_detector.resolve_anomaly(anomaly_id, "DISMISSED")
+    if not item:
+        raise HTTPException(status_code=404, detail="Anomaly record not found")
+    return {"status": "SUCCESS", "action": "DISMISSED", "item": item}
+
 
 
 # ─── Admin Control Center Endpoints (Phase C) ────────────────────────────────

@@ -33,6 +33,19 @@ interface ReviewQueueItem {
   created_at: string;
 }
 
+interface AnomalyItem {
+  id: string;
+  product_id: string;
+  product_name: string;
+  store: string;
+  offer_price: number;
+  rolling_median: number;
+  drop_pct: number;
+  status: "HELD_FOR_VERIFICATION" | "APPROVED" | "DISMISSED";
+  reason: string;
+  created_at: string;
+}
+
 interface StoreItem {
   name: string;
   enabled: boolean;
@@ -72,6 +85,8 @@ export default function AdminPage() {
   const [scheduler, setScheduler] = useState<SchedulerStats | null>(null);
   const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
   const [reviewActionMsg, setReviewActionMsg] = useState<string | null>(null);
+  const [anomalies, setAnomalies] = useState<AnomalyItem[]>([]);
+  const [anomalyActionMsg, setAnomalyActionMsg] = useState<string | null>(null);
   const [evalPairA, setEvalPairA] = useState("Realme 12 Pro+ 5G 256GB");
   const [evalPairB, setEvalPairB] = useState("Realme 12 Pro 5G 256GB");
   const [evalResult, setEvalResult] = useState<any>(null);
@@ -87,17 +102,19 @@ export default function AdminPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [storesRes, syncRes, schedRes, queueRes] = await Promise.all([
+      const [storesRes, syncRes, schedRes, queueRes, anomRes] = await Promise.all([
         fetch(`${API_BASE}/api/admin/stores`).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/sync-status`).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/scheduler`).then((r) => (r.ok ? r.json() : null)),
         fetch(`${API_BASE}/api/admin/review-queue`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/anomalies`).then((r) => (r.ok ? r.json() : null)),
       ]);
 
       if (storesRes?.stores) setStores(storesRes.stores);
       if (syncRes?.connectors) setConnectors(syncRes.connectors);
       if (schedRes) setScheduler(schedRes);
       if (queueRes?.queue) setReviewQueue(queueRes.queue);
+      if (anomRes?.anomalies) setAnomalies(anomRes.anomalies);
     } catch (err) {
       console.error("Error fetching admin telemetry:", err);
     } finally {
@@ -220,6 +237,24 @@ export default function AdminPage() {
     }
   };
 
+  const handleAnomalyAction = async (anomalyId: string, action: "approve" | "dismiss") => {
+    try {
+      setAnomalyActionMsg(`Processing ${action} for anomaly ${anomalyId}...`);
+      const res = await fetch(`${API_BASE}/api/admin/anomalies/${anomalyId}/${action}`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAnomalyActionMsg(`Anomaly ${anomalyId} was marked as ${action.toUpperCase()}D.`);
+        fetchAdminData();
+      } else {
+        setAnomalyActionMsg(`Failed: ${data.detail || "Server error"}`);
+      }
+    } catch (err: any) {
+      setAnomalyActionMsg(`Action error: ${err.message}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       {/* Top Header */}
@@ -241,11 +276,11 @@ export default function AdminPage() {
             <h1 className="text-3xl font-extrabold tracking-tight text-white mt-2 flex items-center gap-2">
               ShopPilot Control Center
               <span className="text-xs px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 font-mono border border-indigo-500/30">
-                Phase D: ML Matching & Review Queue
+                Phase E: Price Prediction & Deal Intelligence
               </span>
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              Store connectors, merchant feed ingestion, scheduler telemetry, and ML matching candidate review queue.
+              Store connectors, merchant feed ingestion, scheduler telemetry, ML matching candidate review queue, and pricing anomaly defense.
             </p>
           </div>
 
@@ -730,6 +765,132 @@ export default function AdminPage() {
               <pre className="text-[11px] text-slate-400 mt-2 overflow-x-auto bg-slate-900/60 p-2 rounded">
                 {JSON.stringify(evalResult, null, 2)}
               </pre>
+            </div>
+          )}
+        </section>
+
+        {/* Section 7: Pricing Anomaly & Glitch Defense (Phase E ML Guards) */}
+        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl mb-12" id="anomaly-section">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-rose-400" />
+                <h2 className="text-xl font-bold text-white">
+                  Pricing Anomaly & Glitch Defense (ML Guards)
+                </h2>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono">
+                  Threshold: ≥70% Below Median
+                </span>
+              </div>
+              <p className="text-sm text-slate-400 mt-1">
+                Extreme pricing drops are held out of the public deals feed automatically to protect shoppers from merchant decimal bugs and pricing glitches.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-3 py-1 bg-rose-500/10 text-rose-300 border border-rose-500/30 rounded-full font-semibold">
+                {anomalies.filter((a) => a.status === "HELD_FOR_VERIFICATION").length} Held for Verification
+              </span>
+              <span className="text-xs px-3 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-full font-semibold">
+                Total: {anomalies.length}
+              </span>
+            </div>
+          </div>
+
+          {anomalyActionMsg && (
+            <div className="mb-4 p-3 bg-rose-950/40 border border-rose-800/40 rounded-lg text-xs font-medium text-rose-300 flex items-center justify-between">
+              <span>⚡ {anomalyActionMsg}</span>
+              <button onClick={() => setAnomalyActionMsg(null)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+          )}
+
+          {anomalies.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-sm">
+              No active pricing anomalies detected. All store offers are within normal statistical boundaries.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {anomalies.map((anom) => (
+                <div
+                  key={anom.id}
+                  className={`p-4 rounded-lg border transition ${
+                    anom.status === "APPROVED"
+                      ? "bg-emerald-950/20 border-emerald-800/40"
+                      : anom.status === "DISMISSED"
+                      ? "bg-slate-900 border-slate-800 opacity-60"
+                      : "bg-rose-950/20 border-rose-800/60"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                        {anom.id}
+                      </span>
+                      <span className="text-xs font-bold text-white">
+                        {anom.product_name}
+                      </span>
+                      <span className="text-xs text-indigo-400 font-semibold">
+                        • Store: {anom.store}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-bold font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                        {anom.drop_pct}% Below Median
+                      </span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${
+                          anom.status === "APPROVED"
+                            ? "bg-emerald-500 text-slate-950"
+                            : anom.status === "DISMISSED"
+                            ? "bg-slate-700 text-slate-300"
+                            : "bg-rose-500 text-white"
+                        }`}
+                      >
+                        {anom.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mb-3">
+                    <div className="p-2.5 bg-slate-950/80 rounded border border-slate-800">
+                      <span className="text-slate-400">Suspicious Offer Price: </span>
+                      <strong className="text-rose-400 text-sm font-bold ml-1">
+                        ₹{anom.offer_price.toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                    <div className="p-2.5 bg-slate-950/80 rounded border border-slate-800">
+                      <span className="text-slate-400">60-Day Rolling Median: </span>
+                      <strong className="text-slate-200 text-sm font-bold ml-1">
+                        ₹{anom.rolling_median.toLocaleString("en-IN")}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800">
+                    <p className="text-xs text-rose-300/90 font-mono">
+                      ⚠️ {anom.reason}
+                    </p>
+
+                    {anom.status === "HELD_FOR_VERIFICATION" && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleAnomalyAction(anom.id, "approve")}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold flex items-center gap-1 transition"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Approve for Deals Feed
+                        </button>
+                        <button
+                          onClick={() => handleAnomalyAction(anom.id, "dismiss")}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs font-semibold flex items-center gap-1 transition"
+                        >
+                          <XCircle className="w-3.5 h-3.5" /> Dismiss Glitch
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

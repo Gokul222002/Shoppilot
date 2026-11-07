@@ -1,7 +1,22 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, ShieldCheck, ArrowLeft, Tag, Share2, Sparkles, ExternalLink, Users } from "lucide-react";
+import {
+  Star,
+  ShieldCheck,
+  ArrowLeft,
+  Tag,
+  Share2,
+  Sparkles,
+  ExternalLink,
+  Users,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Zap,
+  Calendar,
+  AlertTriangle,
+} from "lucide-react";
 import { MockConnector } from "@/lib/mock-connector";
 import OfferRow from "@/components/OfferRow";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
@@ -40,21 +55,31 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
   const maxSavings = highestOffer.price - bestOffer.price;
   const savingsVsMrp = bestOffer.mrp - bestOffer.price;
 
-  // ML Recommendations: Similar Products & People Also Compared
+  // ML Recommendations & Price Forecast Intelligence
   let similarProducts = connector.getSimilar(product, 4);
   let peopleAlsoCompared: any[] = [];
+  let forecastData: any = null;
+  let dealIntel: any = null;
 
   try {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-    const [simRes, compRes] = await Promise.all([
+    const [simRes, compRes, foreRes, intRes] = await Promise.all([
       fetch(`${API_BASE}/api/products/${product.id}/similar?limit=4`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),
       fetch(`${API_BASE}/api/products/${product.id}/also-compared?limit=4`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${API_BASE}/api/products/${product.id}/forecast`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${API_BASE}/api/products/${product.id}/intelligence`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),
     ]);
     if (simRes?.similar_products && simRes.similar_products.length > 0) {
       similarProducts = simRes.similar_products;
     }
     if (compRes?.people_also_compared && compRes.people_also_compared.length > 0) {
       peopleAlsoCompared = compRes.people_also_compared;
+    }
+    if (foreRes && foreRes.status === "SUCCESS") {
+      forecastData = foreRes;
+    }
+    if (intRes) {
+      dealIntel = intRes;
     }
   } catch (err) {
     // Graceful offline fallback
@@ -176,6 +201,41 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
                     </span>
                   )}
                 </div>
+
+                {/* Deal Intelligence Real-Discount & Inflation Evidence */}
+                {dealIntel && (
+                  <div className="mt-3 pt-3 border-t border-gray-800/60">
+                    {dealIntel.is_inflated ? (
+                      <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-xs text-rose-300 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold">Pre-Sale Inflation Warning: </span>
+                          {dealIntel.inflation_evidence} Store claims {dealIntel.claimed_discount_pct}% off MRP, but real discount is only {dealIntel.real_discount_pct}% against the 60-day median (₹{dealIntel.rolling_median.toLocaleString("en-IN")}).
+                        </div>
+                      </div>
+                    ) : dealIntel.assessment === "GENUINE" ? (
+                      <div className="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/50 text-xs text-emerald-300 flex flex-wrap items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          Genuine Deal: Selling {dealIntel.real_discount_pct}% below 60-day median (₹{dealIntel.rolling_median.toLocaleString("en-IN")})
+                        </span>
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 font-mono">
+                          Verified Baseline
+                        </span>
+                      </div>
+                    ) : dealIntel.assessment === "FAKE_INFLATED_MRP" ? (
+                      <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-800/50 text-xs text-amber-300 flex flex-wrap items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <Tag className="w-4 h-4 text-amber-400 shrink-0" />
+                          Inflated MRP: Store claims {dealIntel.claimed_discount_pct}% off MRP, but price is near the ₹{dealIntel.rolling_median.toLocaleString("en-IN")} typical market median.
+                        </span>
+                        <span className="font-bold uppercase tracking-wider text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-mono">
+                          Marketing Illusion
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               {/* Set Price Drop Alert Action */}
@@ -221,6 +281,152 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
         {/* SECTION 3: 12-MONTH PRICE HISTORY TRACKER */}
         <section>
           <PriceHistoryChart history={product.priceHistory} currentPrice={bestOffer.price} />
+        </section>
+
+        {/* SECTION 3.5: AI PRICE FORECAST & BUY/WAIT ADVISORY (PHASE E) */}
+        <section className="bg-gradient-to-br from-slate-900 via-indigo-950/30 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 shadow-xl" id="price-forecast-section">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-5 border-b border-slate-800/80 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-indigo-400" />
+                <h2 className="text-xl font-bold text-white">
+                  Price Forecast & Purchase Advisory
+                </h2>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+                  Phase E: ML Intelligence
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                7-day and 30-day statistical price projection using rolling median, day-of-week modulation, and festive calendar dips.
+              </p>
+            </div>
+
+            {forecastData ? (
+              <div className="flex items-center gap-3">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-wide uppercase border ${
+                    forecastData.recommendation === "BUY_NOW"
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                      : forecastData.recommendation === "WAIT"
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                      : "bg-slate-700 text-slate-300 border-slate-600"
+                  }`}
+                >
+                  {forecastData.recommendation === "BUY_NOW" && <Zap className="w-4 h-4 text-emerald-400" />}
+                  {forecastData.recommendation === "WAIT" && <Clock className="w-4 h-4 text-amber-400" />}
+                  {forecastData.recommendation === "BUY_NOW"
+                    ? `RECOMMENDATION: BUY NOW (${forecastData.confidence}% Confidence)`
+                    : forecastData.recommendation === "WAIT"
+                    ? `RECOMMENDATION: WAIT (${forecastData.confidence}% Confidence)`
+                    : "Not enough data yet"}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-slate-400 px-3 py-1 rounded bg-slate-800 border border-slate-700">
+                Not enough data yet
+              </span>
+            )}
+          </div>
+
+          {forecastData ? (
+            <div className="space-y-5">
+              {/* One-Line Recommendation Reason */}
+              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">
+                    Model Reasoning & Market Assessment
+                  </div>
+                  <p className="text-sm font-medium text-slate-200">
+                    {forecastData.reason}
+                  </p>
+                </div>
+              </div>
+
+              {/* Price Targets Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase">Current Best Price</div>
+                  <div className="text-xl font-bold text-white mt-1">
+                    ₹{forecastData.current_price?.toLocaleString("en-IN")}
+                  </div>
+                  <div className="text-[10px] text-emerald-400 mt-1 font-mono">Verified Active Seller</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase">Next 7-Day Target</div>
+                  <div className="text-xl font-bold text-indigo-300 mt-1">
+                    ₹{forecastData.forecast_7d?.target_price?.toLocaleString("en-IN")}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1 font-mono">
+                    {forecastData.forecast_7d?.change_pct > 0 ? `+${forecastData.forecast_7d.change_pct}%` : `${forecastData.forecast_7d?.change_pct}%`} expected change
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase">30-Day Median Price</div>
+                  <div className="text-xl font-bold text-slate-300 mt-1">
+                    ₹{forecastData.rolling_median_30d?.toLocaleString("en-IN")}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 font-mono">Fair Market Baseline</div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase">12-Month Lowest</div>
+                  <div className="text-xl font-bold text-emerald-400 mt-1">
+                    ₹{forecastData.all_time_low?.toLocaleString("en-IN")}
+                  </div>
+                  <div className="text-[10px] text-emerald-500/80 mt-1 font-mono">Historical Floor</div>
+                </div>
+              </div>
+
+              {/* Day-by-Day 7-Day Trajectory Pills */}
+              {forecastData.forecast_7d?.trajectory?.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-400 mb-2 flex items-center justify-between">
+                    <span>Day-by-Day 7-Day Price Trajectory</span>
+                    <span className="text-[11px] text-slate-500 font-mono">Confidence bounds: ±4%</span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {forecastData.forecast_7d.trajectory.map((pt: any) => (
+                      <div
+                        key={pt.day}
+                        className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-center"
+                      >
+                        <div className="text-[10px] uppercase font-bold text-slate-400">Day +{pt.day}</div>
+                        <div className="text-xs font-bold text-white mt-1">
+                          ₹{pt.predicted_price?.toLocaleString("en-IN")}
+                        </div>
+                        <div className="text-[9px] text-slate-500 mt-0.5 font-mono">
+                          ₹{pt.lower_bound?.toLocaleString("en-IN")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Upcoming Festival Sale Notice */}
+              {forecastData.upcoming_sale && (
+                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-800/50 text-xs text-amber-300 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+                    <strong>Upcoming Festive Event:</strong> {forecastData.upcoming_sale.name} starts in{" "}
+                    <strong>{forecastData.upcoming_sale.days_away} days</strong>. Expected festival category discount: ~{forecastData.upcoming_sale.avg_discount_pct}%.
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold uppercase">
+                    Sale Calendar
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-slate-400 text-xs font-mono">
+              Not enough data yet. Requires at least 30 days of historical price tracking.
+            </div>
+          )}
         </section>
 
         {/* SECTION 4: SIMILAR PRODUCTS (AI VECTOR MATCHED) */}

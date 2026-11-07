@@ -163,3 +163,33 @@
     - `phase_d_admin_reviewed_action.png`: Admin approves `rev-001` candidate match, updating status to `APPROVED` and triggering live matcher diagnostic.
 
 
+
+## Phase E — Price Prediction & Deal Intelligence (ML) ✅ COMPLETE
+- [x] **Configurable Event Calendar (`calendar.py`)**:
+  - Encoded major Indian festive events: Flipkart Big Billion Days, Amazon Great Indian Festival, Diwali Mega Sale, Republic Day Sale, Independence Day Sale, Summer Appliance Sale, and Christmas/Year-End EOSS.
+  - Computes exact proximity (`days_away`) and expected historical category discount factors.
+- [x] **7-Day & 30-Day Price Forecaster (`price_forecaster.py`)**:
+  - Forecasts 7-day day-by-day price trajectory with upper/lower confidence bounds and 30-day target.
+  - Produces actionable `BUY_NOW` vs `WAIT` recommendation with confidence score and one-line reasoning.
+  - Guardrail: Safely outputs `"Not enough data yet"` when historical tracking has fewer than 30 days.
+  - Day-of-week modulation (capturing Friday-Sunday flash deal patterns).
+- [x] **Deal Intelligence & Pre-Sale Inflation Detector (`deal_intelligence.py`)**:
+  - Replaces arbitrary retailer MRPs with rolling 60-day median baseline price.
+  - Analyzes price movements 7-25 days prior to a discount event and flags pre-sale artificial price hikes with exact evidence (`"Price raised 18% twelve days before this sale"`).
+  - Categorizes deals: `GENUINE`, `FAKE_INFLATED_MRP`, `PRE_SALE_PRICE_HIKE`, and `AVERAGE`.
+- [x] **Pricing Anomaly Defense (`anomaly.py` & `/api/deals`)**:
+  - Holds suspicious price glitches (>=70% drop below 60-day rolling median) out of the public deals feed pending admin verification.
+  - Admin controls in `/admin` Section 7 ("Approve for Deals Feed" / "Dismiss Glitch").
+- [x] **Backtest on Held-Out History (`evaluate_forecaster.py` & `FORECASTER_EVALUATION.md`)**:
+  - Evaluated on held-out price points across 50 products over 30-day horizon (350 test instances).
+  - Transparent reporting: Since static daily prices on non-sale days make naive persistence ($\hat{y}_{t+k} = y_t$) hard to beat on non-event days, the system strictly follows instructions and falls back to **Rule-Based Advice** driven by 30-day median baselines, all-time lows, and calendar sale dips.
+- [x] **Offline ML Resilience**:
+  - UI renders seamlessly if ML endpoints are stopped or down, falling back to rule-based badges without crashing.
+- [x] **Verification & Acceptance**:
+  - **45/45 Backend Pytest tests passing** (`pytest backend/tests -v`).
+  - **11/11 Next.js 14 routes compiled with 0 TypeScript/lint errors**.
+  - **Playwright browser acceptance test completed (`verify_phase_e.py`)**:
+    - `phase_e_forecast_advisory.png`: Product compare page displaying Section 3.5: Price Forecast & Purchase Advisory with `WAIT (82% Confidence)` badge, 7-day day-by-day trajectory pills, 30-day target, and upcoming festive event indicator.
+    - `phase_e_deal_intelligence_badge.png`: Lowest verified price card displaying Deal Intelligence assessment (`Inflated MRP: Store claims 26% off MRP, but price is near the ₹25,805 market median`).
+    - `phase_e_admin_anomaly_defense.png`: Admin Control Center displaying Section 7: Pricing Anomaly & Glitch Defense holding `anom-001` (71.6% below median).
+    - `phase_e_admin_anomaly_resolved.png`: Admin approves held anomaly, updating status to `APPROVED` and unholding it for the deals feed.
