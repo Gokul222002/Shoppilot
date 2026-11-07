@@ -24,6 +24,7 @@ export interface Offer {
   inStock: boolean;
   deliveryDays: number;
   sellerRating: number;
+  coupon?: string; // e.g. "Extra ₹500 off via HDFC Bank"
   url: string; // Real store search URL for this product
   lastUpdated: string; // ISO timestamp
 }
@@ -37,6 +38,7 @@ export interface Product {
   imageUrl: string;
   rating: number;
   reviewCount: number;
+  barcode?: string;
   offers: Offer[];
   priceHistory: PricePoint[];
   tags: string[];
@@ -44,6 +46,7 @@ export interface Product {
 
 export interface SearchFilters {
   category?: string;
+  brand?: string;
   minPrice?: number;
   maxPrice?: number;
   store?: string;
@@ -101,8 +104,25 @@ function levenshteinDistance(s1: string, s2: string): number {
   return prevRow[s2.length];
 }
 
+function extractQueryFromInput(raw: string): string {
+  const s = raw.trim();
+  if (s.startsWith("http://") || s.startsWith("https://") || /amazon\.|flipkart\.|croma\.|tatacliq\.|myntra\./i.test(s)) {
+    try {
+      const url = new URL(s.startsWith("http") ? s : `https://${s}`);
+      const segments = url.pathname.split("/").filter((seg) => seg && !["dp", "p", "gp", "product", "buy", "item", "search"].includes(seg));
+      if (segments.length > 0) {
+        let extracted = decodeURIComponent(segments[0]).replace(/[-_+.]+/g, " ");
+        extracted = extracted.replace(/\b(dp|ref|qid|sr|itm\w+|asin)\b/gi, "").trim();
+        if (extracted.length > 2) return extracted;
+      }
+    } catch {}
+  }
+  return s;
+}
+
 function normalizeTokens(query: string): string[] {
-  const clean = query.toLowerCase().replace(/[^\w\s]/g, " ");
+  const parsed = extractQueryFromInput(query);
+  const clean = parsed.toLowerCase().replace(/[^\w\s]/g, " ");
   return clean
     .split(/\s+/)
     .map((t) => t.trim())
@@ -182,6 +202,7 @@ const CATALOG: Product[] = (catalogData as any[]).map((item) => ({
   imageUrl: item.imageUrl,
   rating: item.rating,
   reviewCount: item.reviewCount,
+  barcode: item.barcode || `890100${item.id}`,
   tags: item.tags,
   offers: item.offers.map((o: any) => ({
     store: o.store,
@@ -193,6 +214,7 @@ const CATALOG: Product[] = (catalogData as any[]).map((item) => ({
     inStock: o.in_stock ?? o.inStock ?? true,
     deliveryDays: o.delivery_days ?? o.deliveryDays ?? 2,
     sellerRating: o.seller_rating ?? o.sellerRating ?? 4.5,
+    coupon: o.coupon,
     url: o.url,
     lastUpdated: o.last_updated ?? o.lastUpdated ?? new Date().toISOString(),
   })),
@@ -205,17 +227,25 @@ export class MockConnector {
   private products: Product[] = CATALOG;
 
   /**
-   * Typo-tolerant search across 315+ catalog products.
-   * Handles 'relme', 'iphon 15', 'samsung s24 ultra', etc.
+   * Universal search across 315+ catalog products:
+   * Handles name, model, barcode ('890100...'), pasted product URLs (Amazon, Flipkart),
+   * and typos ('relme', 'iphon 15', 'samsung s24 ultra').
    */
   search(query: string, filters?: SearchFilters): Product[] {
+    const rawQ = (query || "").trim();
+    const isBarcode = /^\d{8,14}$/.test(rawQ);
     const qTokens = normalizeTokens(query || "");
 
     const scoredItems: { product: Product; score: number }[] = [];
 
     for (const p of this.products) {
       // Category filter
-      if (filters?.category && filters.category !== "all" && p.category !== filters.category) {
+      if (filters?.category && filters.category !== "all" && p.category.toLowerCase() !== filters.category.toLowerCase()) {
+        continue;
+      }
+
+      // Brand filter
+      if (filters?.brand && filters.brand !== "all" && p.brand.toLowerCase() !== filters.brand.toLowerCase()) {
         continue;
       }
 
@@ -234,6 +264,14 @@ export class MockConnector {
       // Price range
       if (filters?.minPrice !== undefined && bestPrice < filters.minPrice) continue;
       if (filters?.maxPrice !== undefined && bestPrice > filters.maxPrice) continue;
+
+      // 1. Direct barcode match
+      if (isBarcode) {
+        if (p.barcode === rawQ || p.barcode?.startsWith(rawQ)) {
+          scoredItems.push({ product: p, score: 100.0 });
+          continue;
+        }
+      }
 
       // If query is empty, match all
       if (qTokens.length === 0) {

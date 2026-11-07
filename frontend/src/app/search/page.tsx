@@ -9,14 +9,35 @@ const connector = new MockConnector();
 
 const CATEGORIES = [
   { key: "all", label: "All Categories" },
-  { key: "phones", label: "📱 Phones" },
+  { key: "mobiles", label: "📱 Mobiles" },
   { key: "laptops", label: "💻 Laptops" },
-  { key: "earphones", label: "🎧 Earphones" },
-  { key: "fans", label: "🌀 Fans" },
-  { key: "speakers", label: "🔊 Speakers" },
-  { key: "keyboards", label: "⌨️ Keyboards" },
-  { key: "mice", label: "🖱️ Mice" },
-  { key: "kitchen", label: "🍳 Kitchen" },
+  { key: "tvs", label: "📺 Smart TVs" },
+  { key: "headphones", label: "🎧 Headphones" },
+  { key: "appliances", label: "🔌 Appliances" },
+  { key: "fashion", label: "👕 Fashion" },
+  { key: "grocery", label: "🛒 Grocery" },
+  { key: "books", label: "📚 Books" },
+];
+
+const POPULAR_BRANDS = [
+  "Realme",
+  "Samsung",
+  "Apple",
+  "OnePlus",
+  "Xiaomi",
+  "Redmi",
+  "Vivo",
+  "Oppo",
+  "Motorola",
+  "Poco",
+  "iQOO",
+  "Sony",
+  "Dell",
+  "HP",
+  "Lenovo",
+  "LG",
+  "boAt",
+  "Philips",
 ];
 
 const STORES = ["Amazon.in", "Flipkart", "Myntra", "Croma", "Tata CLiQ"];
@@ -33,6 +54,7 @@ interface SearchPageProps {
   searchParams: Promise<{
     q?: string;
     category?: string;
+    brand?: string;
     min_price?: string;
     max_price?: string;
     store?: string;
@@ -46,6 +68,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
   const q = params.q || "";
   const category = params.category && params.category !== "all" ? params.category : undefined;
+  const brand = params.brand && params.brand !== "all" ? params.brand : undefined;
   const minPrice = params.min_price ? parseInt(params.min_price, 10) : undefined;
   const maxPrice = params.max_price ? parseInt(params.max_price, 10) : undefined;
   const store = params.store || undefined;
@@ -56,6 +79,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const filters: SearchFilters = {
     category,
+    brand,
     minPrice: isNaN(minPrice as number) ? undefined : minPrice,
     maxPrice: isNaN(maxPrice as number) ? undefined : maxPrice,
     store,
@@ -74,6 +98,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     const current: Record<string, string> = {};
     if (q) current.q = q;
     if (category) current.category = category;
+    if (brand) current.brand = brand;
     if (minPrice) current.min_price = minPrice.toString();
     if (maxPrice) current.max_price = maxPrice.toString();
     if (store) current.store = store;
@@ -176,6 +201,51 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   Apply Price
                 </button>
               </form>
+
+              {/* Brands Filter */}
+              <div className="pt-5 border-t border-gray-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Brand</label>
+                  {brand && (
+                    <Link href={makeFilterUrl({ brand: undefined, page: "1" })} className="text-[10px] text-orange-400 hover:underline">
+                      Clear
+                    </Link>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto pr-1">
+                  {POPULAR_BRANDS.map((b) => {
+                    const isSelected = brand?.toLowerCase() === b.toLowerCase();
+                    return (
+                      <Link
+                        key={b}
+                        href={makeFilterUrl({ brand: isSelected ? undefined : b, page: "1" })}
+                        className={`text-[11px] px-2.5 py-1 rounded-lg transition-colors ${
+                          isSelected
+                            ? "bg-orange-500 text-white font-bold"
+                            : "bg-gray-800/80 text-gray-300 hover:bg-gray-800"
+                        }`}
+                      >
+                        {b}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* In-Stock Only Toggle */}
+              <div className="pt-4 border-t border-gray-800">
+                <Link
+                  href={makeFilterUrl({ in_stock: inStock ? undefined : "true", page: "1" })}
+                  className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl transition-colors ${
+                    inStock ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold" : "text-gray-400 hover:bg-gray-800/80"
+                  }`}
+                >
+                  <span>In Stock Only</span>
+                  <span className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] ${inStock ? "bg-emerald-500 text-stone-950 font-bold" : "border border-gray-700"}`}>
+                    {inStock ? "✓" : ""}
+                  </span>
+                </Link>
+              </div>
 
               {/* Stores Filter */}
               <div className="pt-5 border-t border-gray-800 space-y-2">

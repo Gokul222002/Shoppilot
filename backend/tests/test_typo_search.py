@@ -43,3 +43,34 @@ def test_categories_count(catalog):
     assert len(categories) == 8, f"Expected 8 categories, got {categories}"
     expected = {"mobiles", "laptops", "tvs", "headphones", "appliances", "fashion", "grocery", "books"}
     assert categories == expected
+
+def test_barcode_search_direct_match(catalog):
+    first_item = catalog[0]
+    barcode = first_item.get("barcode")
+    assert barcode is not None, "Product must have barcode"
+    results = search_catalog_fuzzy(catalog, barcode)
+    assert len(results) > 0
+    assert results[0]["id"] == first_item["id"]
+
+def test_pasted_amazon_url_search(catalog):
+    pasted_url = "https://www.amazon.in/Realme-12-Pro-Plus-5G-Submarine-Blue/dp/B0CX21M98F"
+    results = search_catalog_fuzzy(catalog, pasted_url)
+    assert len(results) > 0
+    assert any("Realme 12 Pro" in p["name"] for p in results)
+
+def test_pasted_flipkart_url_search(catalog):
+    pasted_url = "https://www.flipkart.com/apple-iphone-15-black-128-gb/p/itm6ac6485515ae4"
+    results = search_catalog_fuzzy(catalog, pasted_url)
+    assert len(results) > 0
+    assert any("iPhone 15" in p["name"] for p in results)
+
+def test_brand_filter(catalog):
+    results = search_catalog_fuzzy(catalog, "", brand="Realme")
+    assert len(results) >= 10
+    assert all(p["brand"] == "Realme" for p in results)
+
+def test_in_stock_filter(catalog):
+    results = search_catalog_fuzzy(catalog, "", in_stock_only=True)
+    assert len(results) > 0
+    for p in results:
+        assert any(o.get("in_stock", True) for o in p["offers"])

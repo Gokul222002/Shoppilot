@@ -17,12 +17,14 @@ const connector = new MockConnector();
 
 const CATEGORIES = [
   { key: "all", label: "All Categories" },
-  { key: "phones", label: "📱 Phones" },
+  { key: "mobiles", label: "📱 Mobiles" },
   { key: "laptops", label: "💻 Laptops" },
-  { key: "earphones", label: "🎧 Earphones" },
-  { key: "fans", label: "🌀 Fans" },
-  { key: "speakers", label: "🔊 Speakers" },
-  { key: "kitchen", label: "🍳 Kitchen" },
+  { key: "tvs", label: "📺 Smart TVs" },
+  { key: "headphones", label: "🎧 Headphones" },
+  { key: "appliances", label: "🔌 Appliances" },
+  { key: "fashion", label: "👕 Fashion" },
+  { key: "grocery", label: "🛒 Grocery" },
+  { key: "books", label: "📚 Books" },
 ];
 
 const BANK_COUPONS = [

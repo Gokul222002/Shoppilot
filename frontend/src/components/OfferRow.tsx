@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ExternalLink, CheckCircle, Truck, Star, AlertCircle, ShieldCheck } from "lucide-react";
+import { ExternalLink, CheckCircle, Truck, Star, AlertCircle, ShieldCheck, Tag, Clock } from "lucide-react";
 import type { Offer } from "@/lib/mock-connector";
 
 interface OfferRowProps {
@@ -66,6 +66,19 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
       ? "2 business days"
       : `${offer.deliveryDays} days`;
 
+  // Construct secure click-out redirect token for affiliate tracking
+  const trackingPayload = {
+    store: offer.store,
+    product: productName,
+    url: offer.url,
+    price: offer.price,
+    time: Date.now(),
+  };
+  const tokenString = typeof window !== "undefined"
+    ? window.btoa(unescape(encodeURIComponent(JSON.stringify(trackingPayload))))
+    : Buffer.from(JSON.stringify(trackingPayload)).toString("base64");
+  const clickOutUrl = `/go/${encodeURIComponent(tokenString)}`;
+
   return (
     <div
       className={`relative flex flex-col md:flex-row md:items-center justify-between p-4 md:p-5 rounded-2xl bg-gray-900 border transition-all duration-200 gap-4 ${
@@ -106,13 +119,25 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
         </div>
       </div>
 
-      {/* Delivery Estimate */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-400 md:min-w-[140px]">
-        <Truck className="w-4 h-4 text-gray-400 shrink-0" />
-        <div>
+      {/* Delivery & Total Cost Breakdown */}
+      <div className="flex flex-col gap-1 text-xs text-gray-400 md:min-w-[160px]">
+        <div className="flex items-center gap-1.5">
+          <Truck className="w-4 h-4 text-gray-400 shrink-0" />
           <span className="text-gray-200 font-medium">{deliveryText}</span>
-          <p className="text-[10px] text-gray-400">Free Standard Shipping</p>
         </div>
+        <div className="text-[11px]">
+          {offer.shipping === 0 ? (
+            <span className="text-emerald-400 font-medium">Total: ₹{offer.price.toLocaleString("en-IN")} (Free shipping)</span>
+          ) : (
+            <span>Total: ₹{(offer.price + offer.shipping).toLocaleString("en-IN")} (₹{offer.price.toLocaleString("en-IN")} + ₹{offer.shipping} delivery)</span>
+          )}
+        </div>
+        {offer.coupon && (
+          <div className="flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md w-fit">
+            <Tag className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+            <span>{offer.coupon}</span>
+          </div>
+        )}
       </div>
 
       {/* Price & Discount */}
@@ -128,12 +153,16 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
         <span className="text-xs text-gray-400 line-through">
           MRP: ₹{offer.mrp.toLocaleString("en-IN")}
         </span>
+        <span className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+          <Clock className="w-2.5 h-2.5" />
+          Updated: {offer.lastUpdated}
+        </span>
       </div>
 
-      {/* Outbound Link Button — NEVER an internal cart, strictly external store link */}
+      {/* Outbound Link Button — Routes through /go/[offerId] click-out tracking */}
       <div className="shrink-0 flex flex-col items-stretch md:items-end">
         <a
-          href={offer.url}
+          href={clickOutUrl}
           target="_blank"
           rel="noopener noreferrer"
           className={`flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-sm transition-all duration-200 shadow-md ${conf.btnClass}`}

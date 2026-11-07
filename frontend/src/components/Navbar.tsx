@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { Sparkles, TrendingDown, Scale, ShieldCheck, Heart, Bot } from "lucide-react";
+import { Sparkles, TrendingDown, Scale, ShieldCheck, Heart, Bot, Columns } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
+import UserNav from "@/components/UserNav";
 
 export default function Navbar() {
   return (
@@ -34,38 +35,49 @@ export default function Navbar() {
         </div>
 
         {/* Action Links */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Link
             href="/deals"
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-3 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-2.5 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
           >
             <TrendingDown className="w-3.5 h-3.5 text-orange-400" />
-            <span>Top Deals</span>
+            <span className="hidden sm:inline">Top Deals</span>
           </Link>
 
           <Link
             href="/search"
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-3 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-2.5 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
           >
             <Scale className="w-3.5 h-3.5 text-blue-400" />
-            <span>Browse All</span>
+            <span className="hidden sm:inline">Browse</span>
+          </Link>
+
+          <Link
+            href="/compare-specs"
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-2.5 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
+          >
+            <Columns className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Compare Specs</span>
           </Link>
 
           <Link
             href="/wishlist"
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-3 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-orange-400 px-2.5 py-2 rounded-xl hover:bg-gray-900 border border-transparent hover:border-gray-800 transition-all duration-200"
           >
             <Heart className="w-3.5 h-3.5 text-pink-400" />
-            <span>Watchlist</span>
+            <span className="hidden sm:inline">Watchlist</span>
           </Link>
 
           <Link
             href="/assistant"
-            className="flex items-center gap-1.5 text-xs font-semibold bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white px-3 py-2 rounded-xl border border-orange-500/30 transition-all duration-200"
+            className="flex items-center gap-1.5 text-xs font-semibold bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white px-2.5 py-2 rounded-xl border border-orange-500/30 transition-all duration-200"
           >
             <Bot className="w-3.5 h-3.5" />
-            <span>AI Advisor</span>
+            <span className="hidden md:inline">AI Advisor</span>
           </Link>
+
+          {/* User Account Nav Pill */}
+          <UserNav />
         </div>
       </nav>
 

@@ -268,6 +268,8 @@ async def search_products(
     min_price: Optional[int] = Query(default=None, description="Minimum price (INR)"),
     max_price: Optional[int] = Query(default=None, description="Maximum price (INR)"),
     store: str = Query(default="", description="Filter by store name"),
+    brand: str = Query(default="", description="Filter by brand"),
+    in_stock_only: Optional[bool] = Query(default=None, description="In-stock only"),
     sort_by: str = Query(default="", description="Sort: price_asc | price_desc | rating | discount"),
     limit: int = Query(default=40, le=100, description="Max results"),
 ):
@@ -280,9 +282,11 @@ async def search_products(
         catalog=PRODUCTS,
         query=q,
         category=category if category else None,
+        brand=brand if brand else None,
         min_price=min_price,
         max_price=max_price,
         store=store if store else None,
+        in_stock_only=in_stock_only,
         sort_by=sort_by if sort_by else None,
     )
 
@@ -384,6 +388,8 @@ async def check_price_alerts():
     Background simulation worker: Checks all active alerts against latest product prices.
     Dispatches mock notification / console-log email for any alerts where current_price <= target_price.
     """
+    from app.notifications.email_service import send_price_drop_email
+
     triggered = []
     for alert in price_alerts:
         prod = next((p for p in PRODUCTS if p["id"] == alert["product_id"] or p.get("legacy_id") == alert["product_id"]), None)
@@ -392,9 +398,16 @@ async def check_price_alerts():
             if current_lowest <= alert["target_price"]:
                 alert["status"] = "TRIGGERED"
                 alert["triggered_at"] = date.today().isoformat()
-                logger.info(
-                    f"[EMAIL DISPATCHED] To: {alert['email']} | Subject: Price Drop Alert: {alert['product_name']} "
-                    f"is now ₹{current_lowest} (Your target was ₹{alert['target_price']})!"
+                best_store = prod["offers"][0]["store"] if prod.get("offers") else "Online Store"
+                best_url = prod["offers"][0]["url"] if prod.get("offers") else ""
+                
+                send_price_drop_email(
+                    to_email=alert["email"],
+                    product_name=alert["product_name"],
+                    current_price=current_lowest,
+                    target_price=alert["target_price"],
+                    store=best_store,
+                    product_url=best_url,
                 )
                 triggered.append({
                     "alert_id": alert["id"],

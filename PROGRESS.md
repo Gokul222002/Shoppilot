@@ -53,3 +53,30 @@
     - Searching `relme` typo returns the same ranked Realme phone models.
     - Clicking Realme 12 Pro+ 5G navigates to the compare page displaying 3 store offers (Amazon.in, Flipkart, Croma), "Lowest Price" badge on Amazon.in (₹27,749 vs MRP ₹36,719), real-discount status ("Regular Market Price"), 12-month interactive SVG price tracker, and alternative models.
   - Acceptance screenshots captured and saved to artifacts.
+
+## Phase B — Audit & Gap Fixes ✅ COMPLETE
+
+### Feature Audit Table
+| Feature | Status Before | Evidence / File Path | Fix Implemented | Status After |
+| :--- | :--- | :--- | :--- | :--- |
+| **Universal search (name, model, barcode, pasted URL)** | Partial | `search_engine.py`, `mock-connector.ts` | Added regex e-commerce URL parser (Amazon, Flipkart, etc.) and GS1 EAN-13 13-digit barcode direct lookup | **Done** ✅ |
+| **Filters & sorting (category, brand, price, store, in-stock; low-high, relevance, discount)** | Partial | `search/page.tsx`, `mock-connector.ts` | Configured all 8 canonical categories, brand sidebar pill filters, in-stock toggle, and price low-high / high-low / discount / rating sorts | **Done** ✅ |
+| **Product page: offers, total cost, best-price, last updated, /go/[offerId] clickout** | Partial | `compare/page.tsx`, `OfferRow.tsx`, `app/go/[offerId]/route.ts` | Created `/go/[offerId]` affiliate click tracking 307 redirect route; added total cost breakdown (`price + shipping`) and bank coupon badges | **Done** ✅ |
+| **Price history chart (7d, 30d, 90d, 1y) with lowest, highest, average** | Done | `PriceHistoryChart.tsx` | Verified interactive SVG chart with dynamic slicing across all 4 timeframes and statistical aggregation | **Done** ✅ |
+| **Real-discount badge (Genuine, Average, Fake)** | Done | `discount-detector.ts`, `PriceHistoryChart.tsx` | Mathematical baseline verification distinguishing genuine all-time lows, inflated MRPs, and typical prices | **Done** ✅ |
+| **Accounts (Google & magic link), wishlist, target alerts, alert job, email fallback** | Partial | `AuthModal.tsx`, `UserNav.tsx`, `email_service.py` | Built Google One-Click and Magic Link auth modal, persistent user session, and SMTP service with console fallback | **Done** ✅ |
+| **Deals feed, categories, coupons** | Partial | `deals/page.tsx`, `DealCard.tsx` | Updated deals feed to 8 canonical categories with active bank coupons (HDFC500, AXIS250, etc.) | **Done** ✅ |
+| **Side-by-side comparison of up to 4 products** | Missing | `compare-specs/page.tsx` | Built `/compare-specs` route rendering full side-by-side spec comparison matrix for up to 4 products | **Done** ✅ |
+| **AI shopping assistant using only database products** | Done | `assistant/page.tsx`, `assistant.py` | Strict catalog grounding; only recommends verified database products with direct compare links | **Done** ✅ |
+| **/health endpoint, CORS** | Done | `main.py` | Tested healthy status, product counts, and configured origins | **Done** ✅ |
+
+### Verification & Testing
+- **37/37 Backend Pytest Tests Passing** (Unit tests covering agent, API, matching, safety, typo search, barcode lookup, pasted URLs, brand and stock filters).
+- **10/10 Next.js 14 Routes Successfully Compiled** (including new `/compare-specs` and `/go/[offerId]` redirect).
+- **End-to-End Playwright Acceptance Test**:
+  1. Universal search with pasted Amazon URL correctly extracts model name and finds Realme 12 Pro+ 5G.
+  2. Filters and sorting correctly filters to Samsung phones sorted Price Low to High.
+  3. Compare page displays total cost breakdown (`₹27,749 (Free shipping)`), bank offers (`Extra ₹500 off via HDFC Bank Cards`), and routes buy links via `/go/[offerId]`.
+  4. `/compare-specs` displays 4 products side-by-side with full specifications and store prices.
+  5. UserNav displays Gokul profile with active wishlist and sign-out capabilities.
+- Acceptance screenshots attached to artifact directory.

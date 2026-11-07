@@ -107,6 +107,15 @@ def generate_history(base_price: int, seed: int) -> List[Dict[str, Any]]:
     return points
 
 
+STORE_COUPONS = {
+    "Amazon.in": "Extra ₹500 off via HDFC Bank Cards",
+    "Flipkart": "10% Instant Discount on Axis Bank",
+    "Croma": "Flat ₹1,000 off on ICICI Credit Cards",
+    "Tata CLiQ": "Save ₹750 via Tata Neu HDFC Card",
+    "Myntra": "Use code MYNTRA200 for ₹200 off",
+}
+
+
 def generate_offers(name: str, base_mrp: int, base_price: int, store_list: List[str]) -> List[Dict[str, Any]]:
     offers = []
     for idx, store in enumerate(store_list):
@@ -126,6 +135,7 @@ def generate_offers(name: str, base_mrp: int, base_price: int, store_list: List[
             "in_stock": True if idx != 3 else (idx % 2 == 0),
             "delivery_days": 1 if idx == 0 else (2 if idx == 1 else 3),
             "seller_rating": round(4.2 + (idx % 4) * 0.15, 1),
+            "coupon": STORE_COUPONS.get(store),
             "url": store_url(store, name),
             "last_updated": date(2026, 11, 7).isoformat(),
         })

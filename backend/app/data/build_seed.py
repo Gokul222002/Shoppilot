@@ -390,6 +390,10 @@ def generate_all_products() -> List[Dict[str, Any]]:
             "priceHistory": generate_history(price, 700 + idx),
         })
 
+    # Assign GS1-compliant 13-digit EAN Barcodes to every product
+    for idx, p in enumerate(products):
+        p["barcode"] = f"890100{idx+1000000:07d}"
+
     return products
 
 
@@ -413,7 +417,8 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
             review_count INTEGER NOT NULL,
             tags TEXT,
             best_price INTEGER,
-            mrp INTEGER
+            mrp INTEGER,
+            barcode TEXT
         )
     """)
 
@@ -451,8 +456,8 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
         best_price = min(o["price"] for o in p["offers"])
         mrp = max(o["mrp"] for o in p["offers"])
         cur.execute(
-            """INSERT INTO products (id, name, brand, category, slug, image_url, rating, review_count, tags, best_price, mrp)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO products (id, name, brand, category, slug, image_url, rating, review_count, tags, best_price, mrp, barcode)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 p["id"],
                 p["name"],
@@ -465,6 +470,7 @@ def seed_sqlite(products: List[Dict[str, Any]], db_path: str):
                 json.dumps(p["tags"]),
                 best_price,
                 mrp,
+                p["barcode"],
             ),
         )
 

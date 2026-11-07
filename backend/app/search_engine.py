@@ -58,8 +58,33 @@ def levenshtein_distance(s1: str, s2: str) -> int:
     return previous_row[-1]
 
 
+from urllib.parse import urlparse, unquote
+
+def extract_query_from_input(raw_input: str) -> str:
+    """Extract product query if user pasted an e-commerce URL or messy link."""
+    s = raw_input.strip()
+    if s.startswith("http://") or s.startswith("https://") or any(dom in s for dom in ("amazon.", "flipkart.", "croma.", "tatacliq.", "myntra.")):
+        try:
+            parsed = urlparse(s if s.startswith("http") else f"https://{s}")
+            path = unquote(parsed.path)
+            # Filter path segments
+            parts = [p for p in path.split('/') if p and p not in ('dp', 'p', 'gp', 'product', 'buy', 'item', 'search')]
+            if parts:
+                slug_part = parts[0]
+                # Replace '-' or '_' with spaces
+                extracted = re.sub(r'[-_+.]+', ' ', slug_part)
+                # Remove common URL tokens
+                extracted = re.sub(r'\b(dp|ref|qid|sr|itm\w+|asin)\b', '', extracted, flags=re.IGNORECASE)
+                if len(extracted.strip()) > 2:
+                    return extracted.strip()
+        except Exception:
+            pass
+    return s
+
+
 def normalize_query_tokens(query: str) -> List[str]:
-    clean = re.sub(r"[^\w\s]", " ", query.lower())
+    parsed_query = extract_query_from_input(query)
+    clean = re.sub(r"[^\w\s]", " ", parsed_query.lower())
     raw_tokens = [t.strip() for t in clean.split() if len(t.strip()) > 0]
     normalized = []
     for t in raw_tokens:
@@ -128,21 +153,33 @@ def search_catalog_fuzzy(
     catalog: List[Dict[str, Any]],
     query: str,
     category: Optional[str] = None,
+    brand: Optional[str] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
     store: Optional[str] = None,
+    in_stock_only: Optional[bool] = None,
     sort_by: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     tokens = normalize_query_tokens(query)
+    clean_q = query.strip()
+    is_barcode = clean_q.isdigit() and len(clean_q) >= 8
 
     scored_items = []
     for p in catalog:
         # Category filter
-        if category and category != "all" and p["category"] != category:
+        if category and category != "all" and p["category"].lower() != category.lower():
+            continue
+
+        # Brand filter
+        if brand and brand != "all" and p["brand"].lower() != brand.lower():
             continue
 
         # Store filter
         if store and not any(o["store"] == store for o in p["offers"]):
+            continue
+
+        # In-stock filter
+        if in_stock_only and not any(o.get("in_stock", True) for o in p["offers"]):
             continue
 
         best_price = min(o["price"] for o in p["offers"])
@@ -152,6 +189,12 @@ def search_catalog_fuzzy(
             continue
         if max_price is not None and best_price > max_price:
             continue
+
+        # 1. Barcode direct match
+        if is_barcode:
+            if p.get("barcode") == clean_q or str(p.get("barcode", "")).startswith(clean_q):
+                scored_items.append((p, 100.0))
+                continue
 
         # If query is empty, return all matching filters
         if not tokens:
