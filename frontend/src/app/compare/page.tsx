@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -28,6 +29,63 @@ const connector = new MockConnector();
 
 interface ComparePageProps {
   searchParams: Promise<{ q?: string; id?: string }>;
+}
+
+export async function generateMetadata({ searchParams }: ComparePageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const query = params.q || params.id || "";
+  let product = connector.getProductBySlug(query);
+  if (!product && query) {
+    const searchMatches = connector.search(query);
+    if (searchMatches.length > 0) product = searchMatches[0];
+  }
+  if (!product) {
+    product = connector.getTrending(1)[0];
+  }
+
+  if (!product) {
+    return { title: "Compare Prices Across Stores — ShopPilot" };
+  }
+
+  const bestPrice = product.offers?.length
+    ? Math.min(...product.offers.map((o) => o.price))
+    : 0;
+  const bestStore = product.offers?.length
+    ? product.offers.reduce((min, o) => (o.price < min.price ? o : min)).store
+    : "Multiple Stores";
+
+  const ogUrl = `/api/og?title=${encodeURIComponent(product.name)}&price=${encodeURIComponent(
+    `₹${bestPrice.toLocaleString("en-IN")}`
+  )}&store=${encodeURIComponent(bestStore)}&subtitle=${encodeURIComponent(
+    `${product.brand} · ${product.category} · Compare ${product.offers?.length || 3} Stores`
+  )}&badge=BEST%20PRICE`;
+
+  return {
+    title: `${product.name} Best Price: ₹${bestPrice.toLocaleString(
+      "en-IN"
+    )} — Compare Stores | ShopPilot`,
+    description: `Compare ${product.name} prices across Amazon, Flipkart, Croma and more. Best price ₹${bestPrice.toLocaleString(
+      "en-IN"
+    )} at ${bestStore}. 12-month price history and real-time drop alerts.`,
+    openGraph: {
+      title: `${product.name} — Best Price ₹${bestPrice.toLocaleString("en-IN")}`,
+      description: `Find the lowest price on ${product.name}. Compare across all top stores with verified price history.`,
+      images: [
+        {
+          url: ogUrl,
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} — Best Price ₹${bestPrice.toLocaleString("en-IN")}`,
+      description: `Compare prices for ${product.name} across India's top retailers.`,
+      images: [ogUrl],
+    },
+  };
 }
 
 export default async function ComparePage({ searchParams }: ComparePageProps) {
@@ -280,6 +338,16 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
 
         {/* SECTION 3: 12-MONTH PRICE HISTORY TRACKER */}
         <section>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-sm font-bold text-gray-300">12-Month Price History</span>
+            <Link
+              href={`/price-history/${product.slug || product.id}`}
+              className="text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1 font-medium transition-colors"
+            >
+              <span>Dedicated Price History Page</span>
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          </div>
           <PriceHistoryChart history={product.priceHistory} currentPrice={bestOffer.price} />
         </section>
 

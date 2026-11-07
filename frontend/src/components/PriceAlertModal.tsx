@@ -36,6 +36,31 @@ export default function PriceAlertModal({
   const [email, setEmail] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [telegramCode, setTelegramCode] = useState<string | null>(null);
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  const [telegramLoading, setTelegramLoading] = useState<boolean>(false);
+
+  async function handleGetTelegramCode() {
+    if (!email) return;
+    setTelegramLoading(true);
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const res = await fetch(`${API_BASE}/api/alerts/telegram/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (res.ok && data.code) {
+        setTelegramCode(data.code);
+        setTelegramLink(data.deep_link);
+      }
+    } catch (err) {
+      console.error("Error generating telegram code:", err);
+    } finally {
+      setTelegramLoading(false);
+    }
+  }
 
   useEffect(() => {
     // Read saved email if any
@@ -136,6 +161,52 @@ export default function PriceAlertModal({
                 <strong className="text-emerald-400">₹{targetPrice.toLocaleString("en-IN")}</strong>.
               </p>
             </div>
+
+            {/* Telegram 1-Click Linking Option */}
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-left">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-sky-400 flex items-center gap-1">
+                  ⚡ Want instant Telegram alerts?
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/30">
+                  Phase F
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mb-2.5">
+                Link your Telegram account using a 6-digit one-time code to get notified before stock runs out.
+              </p>
+
+              {telegramCode ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2 rounded bg-slate-900 border border-slate-700">
+                    <span className="text-xs text-slate-400">Your Linking Code:</span>
+                    <span className="text-base font-mono font-black text-amber-300 tracking-widest">
+                      {telegramCode}
+                    </span>
+                  </div>
+                  {telegramLink && (
+                    <a
+                      href={telegramLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-center w-full py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold transition"
+                    >
+                      Open @ShopPilotAlertsBot on Telegram →
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleGetTelegramCode}
+                  disabled={telegramLoading}
+                  className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition"
+                >
+                  {telegramLoading ? "Generating Code..." : "Generate Telegram Linking Code"}
+                </button>
+              )}
+            </div>
+
             <div className="pt-2">
               <button
                 type="button"

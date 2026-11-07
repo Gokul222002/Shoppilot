@@ -193,3 +193,45 @@
     - `phase_e_deal_intelligence_badge.png`: Lowest verified price card displaying Deal Intelligence assessment (`Inflated MRP: Store claims 26% off MRP, but price is near the ₹25,805 market median`).
     - `phase_e_admin_anomaly_defense.png`: Admin Control Center displaying Section 7: Pricing Anomaly & Glitch Defense holding `anom-001` (71.6% below median).
     - `phase_e_admin_anomaly_resolved.png`: Admin approves held anomaly, updating status to `APPROVED` and unholding it for the deals feed.
+
+## Phase F — Growth Features ✅ COMPLETE
+- [x] **Telegram Alerts & Account Linking (`telegram_service.py`)**:
+  - Implemented `TelegramAlertService` with Telegram Bot API integration and console fallback when `TELEGRAM_BOT_TOKEN` is unset.
+  - 6-digit one-time code generation (`POST /api/alerts/telegram/code`) expiring in 15 minutes with deep-link: `https://t.me/<bot>?start=<code>`.
+  - Instant Markdown price drop alerts (`send_price_drop_alert`) reporting current price, previous price, user target price, savings, and outbound product compare URL.
+  - Alert history tracking (`GET /api/alerts/telegram/history`) and test alert dispatch (`POST /api/alerts/telegram/test`).
+  - Integrated into frontend `PriceAlertModal.tsx` with dedicated Telegram tab, 1-click code generator, and direct deep-link button to `@ShopPilotAlertsBot`.
+  - Email remains the default notification channel.
+- [x] **Chrome Extension (Manifest V3) in `/extension`**:
+  - `manifest.json`: Full Manifest V3 compliance with permissions (`storage`, `tabs`), `host_permissions` for backend/frontend origins, and content scripts for Amazon, Flipkart, Croma, and Tata CLiQ.
+  - Icons: Generated 16x16, 48x48, 128x128 PNG extension icons in `extension/icons/`.
+  - `popup.html` & `popup.js`: Detects active retailer tab title, queries ShopPilot backend for lowest verified price across all stores, displays price comparison rows with shipping and stock, allows setting target price-drop alerts, and offers a 1-click link to compare full specs.
+  - `content.js`: Floating pill injected on supported store pages showing live ShopPilot best price and one-click compare trigger.
+- [x] **Progressive Web App (PWA) & Offline Shell**:
+  - `frontend/public/manifest.json`: Web app manifest configured with `standalone` display, `#030712` theme, and maskable icons.
+  - `frontend/public/icons/`: High-resolution 192x192 and 512x512 maskable PNG icons.
+  - `frontend/public/sw.js`: Service worker implementing pre-caching, cache cleanup, and network-first fetch handler with offline fallback.
+  - `frontend/public/offline.html`: Stylized offline fallback shell with connection retry and offline tips.
+  - `frontend/src/components/PwaRegistrar.tsx`: Client-side service worker registration mounted in `layout.tsx`.
+- [x] **Dynamic Open Graph Share Cards (`/api/og`)**:
+  - `frontend/src/app/api/og/route.tsx`: Edge-rendered 1200x630 dynamic Open Graph share images with product title, best price, store name, category/brand subtitle, and verified badges.
+  - Dynamic `openGraph` and `twitter` tags in `compare`, `deals`, `category/[category]`, and `price-history/[id]`.
+- [x] **SEO Category Landing Pages (`/category/[category]`)**:
+  - Dedicated pages for all 8 canonical categories: `mobiles`, `laptops`, `tvs`, `headphones`, `appliances`, `fashion`, `grocery`, `books`.
+  - Dynamic metadata, breadcrumb navigation, catalog count, lowest price indicator, brand filter pills, sorting, and Schema.org `ItemList` & `BreadcrumbList` JSON-LD.
+  - Shopping FAQ section for SEO rich snippets.
+- [x] **Public Price History Pages (`/price-history/[id]`)**:
+  - Dedicated permanent SEO URLs for historical price analysis.
+  - Key stat cards: Current Lowest, All-Time Lowest, 60-Day Median, Historical Peak with savings % vs peak.
+  - Interactive SVG price chart with 7d, 30d, 90d, 1y timeframes.
+  - Live merchant offers comparison table with direct outbound retailer links.
+  - Schema.org `Product` & `AggregateOffer` JSON-LD.
+- [x] **Verification & Acceptance**:
+  - **46/46 Backend Pytest tests passing** (`pytest backend/tests/test_phase_c.py ... test_phase_f.py`).
+  - **11/11 Next.js 14 routes compiled with 0 TypeScript/lint errors**.
+  - **Playwright browser acceptance test completed (`verify_phase_f.py`)**:
+    - `phase_f_telegram_alert.png`: Telegram UI Modal on compare page generating 6-digit one-time code and deep link, with test alert dispatched.
+    - `phase_f_chrome_extension.png`: Chrome extension popup rendering detected product, ShopPilot best price comparison across Amazon and Flipkart, and target price alert input.
+    - `phase_f_pwa_installable.png`: PWA manifest and service worker validated on homepage.
+    - `phase_f_seo_category.png`: SEO Category Landing Page for Mobiles & Smartphones with Schema.org JSON-LD, brand filters, and catalog pricing stats.
+    - `phase_f_price_history.png`: Public Price History Page with 12-month audit, 60-day median, interactive chart, and live store offer table.

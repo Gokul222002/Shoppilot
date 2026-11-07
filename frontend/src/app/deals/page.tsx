@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   TrendingDown,
@@ -14,6 +15,29 @@ import { MockConnector } from "@/lib/mock-connector";
 import ProductCard from "@/components/ProductCard";
 
 const connector = new MockConnector();
+
+export const metadata: Metadata = {
+  title: "Today's Top Verified Deals & Price Drops — ShopPilot",
+  description:
+    "Curated genuine price drops across Amazon, Flipkart, Croma and Tata CLiQ. Pre-sale price inflation detected and fake discounts filtered out.",
+  openGraph: {
+    title: "Today's Top Verified Deals & Price Drops",
+    description: "Browse genuine price drops verified against 60-day historical medians.",
+    images: [
+      {
+        url: "/api/og?title=Today's%20Verified%20Deals&subtitle=Real%20discounts%20verified%20against%2060-day%20historical%20medians&badge=VERIFIED%20DEALS",
+        width: 1200,
+        height: 630,
+        alt: "ShopPilot Verified Deals",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Today's Verified Price Drops | ShopPilot",
+    description: "Real price drops across India's top retailers with fake discounts filtered out.",
+  },
+};
 
 const CATEGORIES = [
   { key: "all", label: "All Categories" },

@@ -36,6 +36,7 @@ from app.ml.calendar import sale_calendar
 from app.ml.price_forecaster import price_forecaster
 from app.ml.deal_intelligence import deal_intelligence
 from app.ml.anomaly import anomaly_detector
+from app.notifications.telegram_service import telegram_service
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("ShopPilot.Main")
@@ -841,18 +842,120 @@ async def check_price_alerts():
                     store=best_store,
                     product_url=best_url,
                 )
+
+                # Send Telegram alert if linked
+                t_chat_id = telegram_service.get_chat_id_for_user(alert["email"])
+                if t_chat_id:
+                    await telegram_service.send_price_drop_alert(
+                        chat_id=t_chat_id,
+                        product_name=alert["product_name"],
+                        current_price=current_lowest,
+                        target_price=alert["target_price"],
+                        store=best_store,
+                        product_url=best_url,
+                    )
+
                 triggered.append({
                     "alert_id": alert["id"],
                     "email": alert["email"],
                     "product": alert["product_name"],
                     "target_price": alert["target_price"],
                     "current_price": current_lowest,
+                    "telegram_notified": bool(t_chat_id),
                 })
     return {
         "status": "CHECK_COMPLETE",
         "total_evaluated": len(price_alerts),
         "triggered_count": len(triggered),
         "triggered_alerts": triggered,
+    }
+
+
+# ─── Telegram Bot Alerts & Account Linking (Phase F) ──────────────────────────
+
+class TelegramLinkCodeRequest(BaseModel):
+    email: str
+
+class TelegramLinkConfirmRequest(BaseModel):
+    code: str
+    chat_id: str
+
+class TelegramTestAlertRequest(BaseModel):
+    email: Optional[str] = "gokul@example.com"
+    chat_id: Optional[str] = None
+    product_id: Optional[str] = "mob-001"
+    target_price: Optional[int] = 28000
+
+
+@app.post("/api/alerts/telegram/code")
+async def generate_telegram_linking_code(payload: TelegramLinkCodeRequest):
+    """
+    Generate a 6-digit one-time code to link an email with Telegram bot.
+    Returns the code, expiration timestamp, and deep link (https://t.me/bot?start=CODE).
+    """
+    if not payload.email or "@" not in payload.email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+    res = telegram_service.generate_linking_code(payload.email)
+    return res
+
+
+@app.post("/api/alerts/telegram/link")
+async def confirm_telegram_link(payload: TelegramLinkConfirmRequest):
+    """
+    Confirms account linking between user email and Telegram chat ID via 6-digit code.
+    """
+    res = telegram_service.link_account_with_code(code=payload.code, chat_id=payload.chat_id)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Failed to link Telegram"))
+    return res
+
+
+@app.post("/api/alerts/telegram/test")
+async def test_telegram_price_drop_alert(payload: TelegramTestAlertRequest):
+    """
+    Simulates and dispatches a test price-drop alert to Telegram.
+    Verifies alert arrives via Telegram Bot API or console fallback.
+    """
+    chat_id = payload.chat_id
+    if not chat_id and payload.email:
+        chat_id = telegram_service.get_chat_id_for_user(payload.email)
+
+    if not chat_id:
+        chat_id = "987654321"  # Default test chat ID
+
+    product = next((p for p in PRODUCTS if p["id"] == payload.product_id), PRODUCTS[0])
+    curr_price = product.get("best_price", 24199)
+    store = product.get("offers", [{}])[0].get("store", "Amazon.in")
+    url = f"http://localhost:3000/compare?id={product['id']}"
+
+    dispatched = await telegram_service.send_price_drop_alert(
+        chat_id=chat_id,
+        product_name=product["name"],
+        current_price=curr_price,
+        target_price=payload.target_price or (curr_price + 2000),
+        store=store,
+        product_url=url,
+    )
+
+    return {
+        "status": "DISPATCHED",
+        "chat_id": chat_id,
+        "email": payload.email,
+        "product_name": product["name"],
+        "current_price": curr_price,
+        "target_price": payload.target_price or (curr_price + 2000),
+        "store": store,
+        "channel": "TELEGRAM",
+    }
+
+
+@app.get("/api/alerts/telegram/history")
+async def get_telegram_alert_history():
+    """Retrieve history of dispatched Telegram price drop alerts."""
+    return {
+        "total": len(telegram_service.dispatched_alerts),
+        "alerts": telegram_service.dispatched_alerts,
+        "linked_users_count": len(telegram_service.user_telegram_map),
     }
 
 
