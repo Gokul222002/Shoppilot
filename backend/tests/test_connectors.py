@@ -1,7 +1,7 @@
 import pytest
 from app.connectors.base import StoreConnector
 from app.connectors.mock import MockStoreConnector
-from app.connectors.amazon import AmazonPAAPIConnector
+from app.connectors.amazon import AmazonCreatorsConnector, AmazonPAAPIConnector
 from app.connectors.flipkart import FlipkartAffiliateConnector
 from app.connectors.feed_importer import MerchantFeedConnector
 from app.connectors.registry import connector_registry
@@ -30,10 +30,10 @@ def test_mock_store_connector_interface():
     assert len(offers) > 0
     assert any(o["store"] == "Amazon.in" for o in offers)
 
-def test_amazon_paapi_connector_graceful_fallback():
-    amazon = AmazonPAAPIConnector()
+def test_amazon_creators_connector_graceful_fallback():
+    amazon = AmazonCreatorsConnector()
     assert isinstance(amazon, StoreConnector)
-    assert amazon.name == "AmazonPAAPIConnector"
+    assert amazon.name in ("AmazonCreatorsConnector", "AmazonPAAPIConnector")
 
     # Without keys, is_configured should be false
     assert not amazon.is_configured
@@ -48,6 +48,9 @@ def test_amazon_paapi_connector_graceful_fallback():
 
     offers = amazon.get_offers("mob-001")
     assert len(offers) > 0
+
+    # Token request without credentials returns None without crashing
+    assert amazon.get_access_token() is None
 
 def test_flipkart_affiliate_connector_graceful_fallback():
     flipkart = FlipkartAffiliateConnector()
@@ -66,6 +69,33 @@ def test_merchant_feed_connector_graceful_fallback():
 
     results = feed.search("laptop")
     assert len(results) > 0
+
+def test_merchant_feed_xml_and_sanity_validation():
+    feed = MerchantFeedConnector()
+    # XML feed with 1 valid offer and 1 price-insane glitch offer (iPhone 15 at ₹500)
+    sample_xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <products>
+        <item>
+            <title>Realme GT 6 (Fluid Silver, 256GB, 12GB RAM)</title>
+            <store>Tata CLiQ</store>
+            <price>39999</price>
+            <mrp>45999</mrp>
+            <url>https://www.tatacliq.com/p-12345</url>
+        </item>
+        <item>
+            <title>Apple iPhone 15 Pro Max (Natural Titanium, 256GB)</title>
+            <store>GlitchStore</store>
+            <price>500</price>
+            <mrp>161499</mrp>
+            <url>https://fake.deal/iphone</url>
+        </item>
+    </products>
+    """
+    res = feed.parse_and_merge_xml(sample_xml)
+    assert res["status"] == "SUCCESS"
+    assert res["rows_read"] == 2
+    # Only the valid Realme offer should be merged; the ₹500 iPhone offer MUST be rejected by price sanity validator
+    assert res["offers_merged"] == 1
 
 def test_connector_registry_orchestration(monkeypatch):
     assert connector_registry.use_mock is True

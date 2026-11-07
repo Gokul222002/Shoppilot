@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Star, ExternalLink, Bell, Sparkles, Layers } from "lucide-react";
 import type { Product } from "@/lib/mock-connector";
 import { analyzeDiscount } from "@/lib/discount-detector";
+import { isPriceExpired } from "@/lib/price-freshness";
 import PriceAlertModal from "./PriceAlertModal";
 import BrandedProductPlaceholder from "./BrandedProductPlaceholder";
 
@@ -45,6 +46,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const bestOffer = product.offers.reduce((a, b) => (a.price < b.price ? a : b));
   const bestDiscount = Math.max(...product.offers.map((o) => o.discountPct));
   const isDemo = bestOffer.dataSource === "demo" || bestOffer.isDemo !== false;
+  const isExpired = isPriceExpired(bestOffer);
 
   // Family price range calculation
   const hasMultipleVariants = Boolean(product.variants && product.variants.length > 1);
@@ -54,21 +56,27 @@ export default function ProductCard({ product }: ProductCardProps) {
   const minFamilyPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : bestOffer.price;
   const maxFamilyPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : bestOffer.price;
 
-  // Run real discount analysis only if non-demo
-  const discountAnalysis = analyzeDiscount(
-    bestOffer.price,
-    bestOffer.mrp,
-    product.priceHistory
-  );
+  // Run real discount analysis only if non-demo and not expired
+  const discountAnalysis = (!isDemo && !isExpired)
+    ? analyzeDiscount(bestOffer.price, bestOffer.mrp, product.priceHistory)
+    : { verdict: "UNKNOWN", fakeDiscountConfidence: 0, reason: "" };
 
   return (
     <>
-      <article className="group relative flex flex-col bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-orange-500/50 hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300">
+      <article className={`group relative flex flex-col bg-gray-900 border rounded-2xl overflow-hidden transition-all duration-300 ${
+        isExpired
+          ? "border-gray-800/80 opacity-85 hover:border-gray-700"
+          : "border-gray-800 hover:border-orange-500/50 hover:shadow-xl hover:shadow-orange-500/10"
+      }`}>
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
           {isDemo ? (
             <span className="bg-amber-500/90 text-stone-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">
               Demo Price
+            </span>
+          ) : isExpired ? (
+            <span className="bg-gray-800 text-gray-400 text-[10px] font-semibold border border-gray-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+              Price may have changed
             </span>
           ) : discountAnalysis.verdict === "GENUINE_DEAL" ? (
             <span className="bg-emerald-500 text-stone-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md">

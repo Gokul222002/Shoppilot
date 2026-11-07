@@ -124,11 +124,15 @@ class MockStoreConnector(StoreConnector):
         currency: str = "INR",
         product_id: Optional[str] = None,
         barcode: Optional[str] = None,
+        data_source: str = "feed",
     ) -> bool:
         """
         Merges or updates an external store offer into an existing canonical product.
         product_identifier matches barcode, id, slug, or exact product_name.
         """
+        from datetime import datetime, timezone
+        ts_now = datetime.now(timezone.utc).isoformat()
+
         prod = None
         if product_id:
             prod = self._find_raw_product(product_id)
@@ -161,6 +165,10 @@ class MockStoreConnector(StoreConnector):
                 "shipping_fee": shipping_fee,
                 "region": region,
                 "currency": currency,
+                "dataSource": data_source,
+                "last_updated": ts_now,
+                "is_demo": False,
+                "verified": True,
             })
         else:
             new_offer = {
@@ -175,6 +183,10 @@ class MockStoreConnector(StoreConnector):
                 "shipping_fee": shipping_fee,
                 "region": region,
                 "currency": currency,
+                "dataSource": data_source,
+                "last_updated": ts_now,
+                "is_demo": False,
+                "verified": True,
             }
             prod.setdefault("offers", []).append(new_offer)
 

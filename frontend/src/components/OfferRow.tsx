@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { ExternalLink, CheckCircle, Truck, Star, AlertCircle, ShieldCheck, Tag, Clock } from "lucide-react";
+import { ExternalLink, CheckCircle, Truck, Star, AlertCircle, ShieldCheck, Tag, Clock, AlertTriangle } from "lucide-react";
 import type { Offer } from "@/lib/mock-connector";
+import { evaluatePriceFreshness } from "@/lib/price-freshness";
 
 interface OfferRowProps {
   offer: Offer;
@@ -66,6 +67,8 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
       ? "2 business days"
       : `${offer.deliveryDays} days`;
 
+  const freshness = evaluatePriceFreshness(offer);
+
   // Construct secure click-out redirect token for affiliate tracking
   const trackingPayload = {
     store: offer.store,
@@ -81,25 +84,25 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
 
   return (
     <div
-      className={`relative flex flex-col md:flex-row md:items-center justify-between p-4 md:p-5 rounded-2xl bg-gray-900 border transition-all duration-200 gap-4 ${
-        isBest
+      className={`relative flex flex-col md:flex-row md:items-center justify-between p-4 md:p-5 rounded-2xl border transition-all duration-200 gap-4 ${
+        freshness.isExpired
+          ? "bg-gray-950/80 border-gray-800 text-gray-400 opacity-85"
+          : isBest
           ? "border-emerald-500/60 shadow-lg shadow-emerald-500/5 bg-gradient-to-r from-emerald-950/20 via-gray-900 to-gray-900"
-          : "border-gray-800 hover:border-gray-700"
+          : "bg-gray-900 border-gray-800 hover:border-gray-700"
       } ${conf.borderClass}`}
     >
-      {/* Best Price / Demo Tag */}
-      {isBest && (
+      {/* Best Price / Demo Tag — Only displayed if eligible (not expired) */}
+      {isBest && !freshness.isExpired && (
         <div
           className={`absolute -top-3 left-4 text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-md ${
-            offer.dataSource === "live" || offer.dataSource === "feed"
+            freshness.eligibleForDealClaim
               ? "bg-emerald-500 text-stone-950 shadow-emerald-500/20"
               : "bg-amber-500/90 text-stone-950 shadow-amber-500/20"
           }`}
         >
           <ShieldCheck className="w-3 h-3" />
-          {offer.dataSource === "live" || offer.dataSource === "feed"
-            ? "Lowest Price"
-            : "Demo Best Price"}
+          {freshness.eligibleForDealClaim ? "Lowest Price" : "Demo Best Price"}
         </div>
       )}
 
@@ -151,15 +154,19 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
       {/* Price & Discount */}
       <div className="flex items-baseline md:items-end flex-col md:text-right min-w-[140px]">
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-extrabold text-white">
+          <span className={`text-2xl font-extrabold ${freshness.isExpired ? "text-gray-400" : "text-white"}`}>
             ₹{offer.price.toLocaleString("en-IN")}
           </span>
-          <span className="text-xs text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
+          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md border ${
+            freshness.isExpired
+              ? "text-gray-400 bg-gray-800 border-gray-700"
+              : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+          }`}>
             -{offer.discountPct}%
           </span>
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-xs text-gray-400 line-through">
+          <span className="text-xs text-gray-500 line-through">
             MRP: ₹{offer.mrp.toLocaleString("en-IN")}
           </span>
           {(offer.dataSource === "demo" || !offer.dataSource) && (
@@ -167,12 +174,23 @@ export default function OfferRow({ offer, isBest = false, productName }: OfferRo
               Demo price
             </span>
           )}
-          {offer.dataSource === "live" && (
+          {offer.dataSource === "live" && !freshness.isExpired && (
             <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               Live price
             </span>
           )}
+          {freshness.isExpired && (
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-gray-800 text-gray-400 border border-gray-700">
+              Expired
+            </span>
+          )}
         </div>
+        {freshness.warning && (
+          <div className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md mt-1">
+            <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+            <span>{freshness.warning}</span>
+          </div>
+        )}
         <span className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
           <Clock className="w-2.5 h-2.5" />
           Updated: {offer.lastUpdated}

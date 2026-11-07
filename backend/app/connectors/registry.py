@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 
 from app.connectors.base import StoreConnector
 from app.connectors.mock import MockStoreConnector
-from app.connectors.amazon import AmazonPAAPIConnector
+from app.connectors.amazon import AmazonCreatorsConnector, AmazonPAAPIConnector
 from app.connectors.flipkart import FlipkartAffiliateConnector
 from app.connectors.feed_importer import MerchantFeedConnector
 from app.connectors.scheduler import price_scheduler
@@ -23,7 +23,7 @@ logger = logging.getLogger("ShopPilot.Connectors.Registry")
 class ConnectorRegistry:
     def __init__(self):
         self.mock_connector = MockStoreConnector()
-        self.amazon_connector = AmazonPAAPIConnector(fallback_connector=self.mock_connector)
+        self.amazon_connector = AmazonCreatorsConnector(fallback_connector=self.mock_connector)
         self.flipkart_connector = FlipkartAffiliateConnector(fallback_connector=self.mock_connector)
         self.feed_connector = MerchantFeedConnector(fallback_connector=self.mock_connector)
 
@@ -48,7 +48,7 @@ class ConnectorRegistry:
             "amazon": {
                 "status": "FALLBACK_ACTIVE" if not self.amazon_connector.is_configured else "HEALTHY",
                 "last_sync": datetime.utcnow().isoformat(),
-                "error": None if self.amazon_connector.is_configured else "PA-API keys absent; offline fallback engaged.",
+                "error": None if self.amazon_connector.is_configured else "Creators API credentials absent; offline fallback engaged.",
                 "items_count": len(self.mock_connector.products),
             },
             "flipkart": {

@@ -84,6 +84,21 @@ def score_product_match(query_tokens: List[str], product: Dict[str, Any], raw_qu
 
     score = 0.0
 
+    # Category keyword matching
+    for q_tok in query_tokens:
+        if q_tok in (cat_clean, cat_clean[:-1]):
+            score += 15.0
+        elif q_tok in ("phone", "mobile", "smartphone") and cat_clean == "mobiles":
+            score += 15.0
+        elif q_tok in ("laptop", "notebook", "laptops") and cat_clean == "laptops":
+            score += 15.0
+        elif q_tok in ("tv", "television", "tvs") and cat_clean == "tvs":
+            score += 15.0
+        elif q_tok in ("headphone", "headphones", "earphone", "earbuds", "earbud") and cat_clean == "headphones":
+            score += 15.0
+        elif q_tok in ("appliance", "appliances", "fridge", "washing", "machine", "fan") and cat_clean == "appliances":
+            score += 15.0
+
     # 1. Exact Family Match (Top Priority: fixes Defect D2)
     if family_tokens and meaningful_q_tokens:
         q_matched_in_family = [t for t in meaningful_q_tokens if t in family_tokens]

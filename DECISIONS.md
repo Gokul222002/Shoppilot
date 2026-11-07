@@ -33,3 +33,15 @@ This document records all architectural choices, assumptions, and design decisio
 - **Gemini Function Calling Architecture:** Rebuilt `/api/assistant` using tool definitions (`searchProducts`, `getFamily`, `getOffers`, `compareFamilies`, `getPriceHistory`).
 - **Deterministic Grounded Offline Engine:** When `GEMINI_API_KEY` is not present, queries are executed against the exact same grounded catalog tools deterministically. It refuses to recommend unrelated brands (never recommends iPhone for Realme), defends against prompt injection, detects price glitches (e.g. ₹999 iPhone), and refuses competitor site scraping.
 - **30-Query Evaluation Suite:** Comprehensive automated test suite in `backend/tests/test_ai_eval.py` verifies 100% pass rate across 30 distinct query scenarios, generating `docs/AI_EVAL.md`.
+
+## Workstream 6 & 6B: Live Pricing Pipeline & Price Accuracy Hierarchy
+- **Amazon Creators API Migration:** Implemented modern 2024+ Amazon Creators API connector with OAuth 2.0 token caching and automatic refresh via `https://api.amazon.com/auth/o2/token`. Backwards compatibility retained for legacy PA-API credentials.
+- **Flipkart Affiliate API & Merchant Feeds:** Implemented Flipkart affiliate connector and generic merchant feed connector with dual CSV/XML support (RSS/Atom/affiliate XML). Enforced mathematical price sanity validator on all ingested feed offers to reject fraudulent or glitch prices.
+- **Price Freshness Hierarchy:**
+  1. `live`: fresh within 15 minutes.
+  2. `feed`: fresh within 6 hours.
+  3. `community`: fresh within 48 hours.
+  4. `admin`: fresh within 7 days.
+  5. `estimate`: fresh within 14 days.
+  6. `demo`: simulated presentation data (never expires).
+- **Expired Price Handling:** Expired offers display in grey with a `"May have changed, check the store"` alert badge. Expired prices are strictly excluded from deal claims ("Lowest Price", "All-Time Low", etc.).
