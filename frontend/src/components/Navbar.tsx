@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Sparkles, TrendingDown, Scale, ShieldCheck, Heart } from "lucide-react";
+import { Sparkles, TrendingDown, Scale, ShieldCheck, Heart, Bot } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 
 export default function Navbar() {
@@ -57,6 +57,14 @@ export default function Navbar() {
           >
             <Heart className="w-3.5 h-3.5 text-pink-400" />
             <span>Watchlist</span>
+          </Link>
+
+          <Link
+            href="/assistant"
+            className="flex items-center gap-1.5 text-xs font-semibold bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white px-3 py-2 rounded-xl border border-orange-500/30 transition-all duration-200"
+          >
+            <Bot className="w-3.5 h-3.5" />
+            <span>AI Advisor</span>
           </Link>
         </div>
       </nav>

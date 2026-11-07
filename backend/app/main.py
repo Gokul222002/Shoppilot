@@ -466,6 +466,70 @@ async def check_price_alerts():
     }
 
 
+# ─── AI Shopping Assistant Endpoint ──────────────────────────────────────────
+
+class AssistantQueryRequest(BaseModel):
+    query: str
+
+@app.post("/api/assistant")
+async def ai_shopping_assistant(payload: AssistantQueryRequest):
+    """
+    AI Shopping Advisor: Analyzes query using Gemini API (with heuristic catalog fallback)
+    and returns expert advice along with matching catalog products.
+    """
+    from app.agent.assistant import extract_budget, ask_gemini, generate_heuristic_advice
+
+    q = payload.query.strip()
+    if not q:
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    budget = extract_budget(q)
+    tokens = [t.lower() for t in re.sub(r"[^\w\s]", " ", q).split() if len(t) > 2]
+
+    # Filter matching products from catalog
+    matching = []
+    for p in PRODUCTS:
+        name_lower = p["name"].lower()
+        cat_lower = p["category"].lower()
+        brand_lower = p["brand"].lower()
+        tags_lower = [t.lower() for t in p.get("tags", [])]
+
+        matches = any(tok in name_lower or tok in cat_lower or tok in brand_lower or any(tok in tg for tg in tags_lower) for tok in tokens)
+        if matches:
+            if budget and p["best_price"] > budget * 1.25:
+                continue
+            matching.append(p)
+
+    # Sort matching by rating & reviews
+    matching.sort(key=lambda x: (x["rating"], x["review_count"]), reverse=True)
+    top_matches = matching[:4] if matching else PRODUCTS[:3]
+
+    # Try Gemini API first if configured
+    gemini_prompt = (
+        f"You are the ShopPilot AI Shopping Advisor. The user asked: \"{q}\".\n"
+        f"Available verified store products:\n" +
+        "\n".join([f"- {p['name']}: ₹{p['best_price']} (MRP ₹{p['mrp']}) on {p['offers'][0]['store'] if p['offers'] else 'Amazon'}, Rating {p['rating']}★" for p in top_matches]) +
+        "\nProvide concise, helpful shopping advice in 2-3 brief paragraphs. Emphasize value, key specs, and where to buy at the lowest price. Never mention carts or checkouts, as ShopPilot is a price comparison engine."
+    )
+
+    gemini_resp = await ask_gemini(gemini_prompt)
+    if gemini_resp:
+        response_text = gemini_resp
+        model_used = settings.VISION_MODEL_NAME
+    else:
+        response_text = generate_heuristic_advice(q, top_matches, budget)
+        model_used = "ShopPilot Catalog AI Heuristic"
+
+    return {
+        "query": q,
+        "response": response_text,
+        "budget": budget,
+        "model": model_used,
+        "products": top_matches,
+    }
+
+
+
 
 # ─── WebSocket Endpoint ───────────────────────────────────────────────────────
 

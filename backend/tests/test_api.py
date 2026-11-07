@@ -110,3 +110,13 @@ def test_check_price_alerts_worker():
     result = check_resp.json()
     assert result['status'] == 'CHECK_COMPLETE'
     assert result['triggered_count'] >= 1
+
+
+def test_api_assistant_endpoint():
+    resp = client.post('/api/assistant', json={'query': 'Find me a phone under 35000 with 5G'})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert 'response' in data
+    assert 'products' in data
+    assert data['budget'] == 35000
+    assert len(data['products']) > 0

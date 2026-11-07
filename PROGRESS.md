@@ -26,5 +26,9 @@
 - [x] Backend alert registry (`POST /api/alerts`, `GET /api/alerts`, `POST /api/alerts/check`) with automated pytest tests passing
 - [x] Zero cart/checkout violation maintained — strictly 100% price comparison and outbound affiliate links
 
-## Phase 5 — Matching & Connector Framework 🔜
-## Phase 6 — Gemini AI Shopping Assistant Route 🔜
+## Phase 5 & 6 — Product Matcher & AI Shopping Advisor ✅ COMPLETE
+- [x] `product-matcher.ts` and `matching.py`: Multi-store listing deduplication engine with token Jaccard similarity and spec normalization (5/5 unit tests pass)
+- [x] `POST /api/assistant`: Gemini-powered natural language shopping advisor with automatic catalog intelligence fallback
+- [x] `/assistant`: Interactive chat UI with query presets, expert advice cards, and embedded product comparison links
+- [x] 26/26 backend unit tests passing
+- [x] 9/9 Next.js static & dynamic routes compiled with 0 TypeScript errors
