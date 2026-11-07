@@ -98,16 +98,19 @@ export default function AdminPage() {
   const [schedulerMessage, setSchedulerMessage] = useState<string | null>(null);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const ADMIN_HEADERS: Record<string, string> = {
+    "X-Admin-Key": process.env.NEXT_PUBLIC_ADMIN_KEY || "shoppilot-admin-secret-2026",
+  };
 
   const fetchAdminData = async () => {
     try {
       setLoading(true);
       const [storesRes, syncRes, schedRes, queueRes, anomRes] = await Promise.all([
-        fetch(`${API_BASE}/api/admin/stores`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`${API_BASE}/api/admin/sync-status`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`${API_BASE}/api/admin/scheduler`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`${API_BASE}/api/admin/review-queue`).then((r) => (r.ok ? r.json() : null)),
-        fetch(`${API_BASE}/api/admin/anomalies`).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/stores`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/sync-status`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/scheduler`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/review-queue`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
+        fetch(`${API_BASE}/api/admin/anomalies`, { headers: ADMIN_HEADERS }).then((r) => (r.ok ? r.json() : null)),
       ]);
 
       if (storesRes?.stores) setStores(storesRes.stores);
@@ -130,7 +133,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`${API_BASE}/api/admin/stores/toggle`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...ADMIN_HEADERS, "Content-Type": "application/json" },
         body: JSON.stringify({ store: storeName, enabled: !currentEnabled }),
       });
       if (res.ok) {
@@ -148,7 +151,7 @@ export default function AdminPage() {
       setSyncingKey(connectorKey);
       await fetch(`${API_BASE}/api/admin/connectors/${connectorKey}/trigger-sync`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...ADMIN_HEADERS, "Content-Type": "application/json" },
         body: JSON.stringify({ simulate_failure: simulateFailure }),
       });
       await fetchAdminData();
@@ -165,7 +168,7 @@ export default function AdminPage() {
       setUploadStatus("Uploading & merging feed...");
       const res = await fetch(`${API_BASE}/api/admin/feed/upload`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...ADMIN_HEADERS, "Content-Type": "application/json" },
         body: JSON.stringify({ feed_csv: feedInput }),
       });
       const data = await res.json();
@@ -187,7 +190,7 @@ export default function AdminPage() {
       setSchedulerMessage("Running scheduler cycle...");
       const res = await fetch(`${API_BASE}/api/admin/scheduler/run`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...ADMIN_HEADERS, "Content-Type": "application/json" },
         body: JSON.stringify({ tier: "all", shift_sample_price: shiftSample }),
       });
       const data = await res.json();
@@ -205,6 +208,7 @@ export default function AdminPage() {
       setReviewActionMsg(`Processing review action for ${itemId}...`);
       const res = await fetch(`${API_BASE}/api/admin/review-queue/${itemId}/${action}`, {
         method: "POST",
+        headers: ADMIN_HEADERS,
       });
       const data = await res.json();
       if (res.ok) {
@@ -225,7 +229,7 @@ export default function AdminPage() {
     try {
       const res = await fetch(`${API_BASE}/api/admin/matcher/evaluate-pair`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...ADMIN_HEADERS, "Content-Type": "application/json" },
         body: JSON.stringify({ title_a: evalPairA, title_b: evalPairB }),
       });
       const data = await res.json();
@@ -242,6 +246,7 @@ export default function AdminPage() {
       setAnomalyActionMsg(`Processing ${action} for anomaly ${anomalyId}...`);
       const res = await fetch(`${API_BASE}/api/admin/anomalies/${anomalyId}/${action}`, {
         method: "POST",
+        headers: ADMIN_HEADERS,
       });
       const data = await res.json();
       if (res.ok) {

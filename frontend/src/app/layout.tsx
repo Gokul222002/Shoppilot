@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PwaRegistrar from "@/components/PwaRegistrar";
+import CookieConsent from "@/components/CookieConsent";
 
 export const viewport: Viewport = {
   themeColor: "#030712",
@@ -55,6 +56,7 @@ export default function RootLayout({
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />
+        <CookieConsent />
       </body>
     </html>
   );

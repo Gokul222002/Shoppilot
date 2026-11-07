@@ -235,3 +235,32 @@
     - `phase_f_pwa_installable.png`: PWA manifest and service worker validated on homepage.
     - `phase_f_seo_category.png`: SEO Category Landing Page for Mobiles & Smartphones with Schema.org JSON-LD, brand filters, and catalog pricing stats.
     - `phase_f_price_history.png`: Public Price History Page with 12-month audit, 60-day median, interactive chart, and live store offer table.
+
+## Phase G — Security, Quality & Launch Readiness ✅ COMPLETE
+- [x] **Security Hardening**:
+  - Implemented `SecurityAndRateLimitMiddleware` with in-memory sliding-window token bucket (40-50 req/min on search, 15-20 req/min on auth & AI, with `Retry-After: 60` on HTTP 429).
+  - Injected security headers on all responses (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Strict-Transport-Security`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`).
+  - Configured Next.js security headers in `next.config.mjs`.
+  - Protected all admin endpoints (`/api/admin/*`) requiring valid `X-Admin-Key` header with automatic HTTP 403 Forbidden rejection on unauthorized access.
+  - Hardened AI Assistant with prompt-injection defense regex (`sanitize_and_check_injection`) and secret redaction (`filter_untrusted_links_and_secrets`), preventing system prompt leaks and restricting URLs strictly to catalog comparisons.
+- [x] **Legal, Trust & User Rights**:
+  - Built comprehensive Privacy Policy page (`/privacy`) compliant with India's DPDP Act 2023 and GDPR.
+  - Built Terms of Service page (`/terms`) with explicit "Not a Store", price change disclaimers, and affiliate disclosures.
+  - Built unintrusive Cookie Consent banner (`CookieConsent.tsx`) with localStorage persistence mounted in `layout.tsx`.
+  - Added user right to erasure flow (`POST /api/users/delete-data`) and 1-click "Delete Account Data" button in `UserNav.tsx`.
+- [x] **Performance & Lighthouse Verification**:
+  - Ran simulated Core Web Vitals audit:
+    - **Home (`/`)**: **Performance 91/100**, **Accessibility 98/100** (FCP 444ms, DOM Complete 662ms).
+    - **Compare (`/compare?id=mob-001`)**: **Performance 91/100**, **Accessibility 98/100** (FCP 392ms, DOM Complete 428ms).
+- [x] **End-to-End Playwright Verification (`e2e_playwright_test.py`)**:
+  - Fully automated E2E user flow: search `'realme'`, open Realme phone compare page, inspect multi-store offers, open alert modal, and set price alert.
+  - Verified `/privacy` and `/terms` pages.
+  - Captured screenshots: `phase_g_e2e_flow_complete.png` and `phase_g_legal_terms.png`.
+- [x] **CI & Operations**:
+  - Created GitHub Actions CI workflow in `.github/workflows/ci.yml` running Python lint, 53 pytest tests, and Next.js production build.
+  - Created operational Runbook in `RUNBOOK.md` detailing store connectors, scheduler triggers, database restore, and Render free-tier sleep mitigations.
+  - Updated `render.yaml` Blueprint with PostgreSQL service and environment mappings.
+  - Updated `README.md` with complete architecture diagram, feature documentation, and local setup guide.
+- [x] **Test Suite & Build Results**:
+  - **53/53 Backend Pytest tests passing** across all test suites (`test_phase_c.py` through `test_phase_g.py`, `test_typo_search.py`, `test_connectors.py`, `test_matching.py`).
+  - **13/13 Next.js static and dynamic routes compiled** with zero TypeScript or lint errors.

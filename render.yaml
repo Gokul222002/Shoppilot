@@ -1,6 +1,15 @@
-# Render Blueprint Specification for ShopPilot
+# Render Blueprint Specification for ShopPilot (Phase G Production Ready)
+version: "1"
+
+databases:
+  - name: shoppilot-postgres
+    databaseName: shoppilot
+    user: shoppilot_user
+    plan: free
+    region: singapore
+
 services:
-  # Backend FastAPI Service
+  # 1. Backend FastAPI Price Comparison API Service
   - type: web
     name: shoppilot-backend
     env: docker
@@ -8,23 +17,44 @@ services:
     dockerContext: backend
     plan: free
     region: singapore
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 8000
       - key: HOST
         value: 0.0.0.0
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shoppilot-postgres
+          property: connectionString
       - key: FRONTEND_URL
         value: "https://shoppilot-frontend-fo5e.onrender.com"
-      - key: HEADLESS
+      - key: ADMIN_SECRET_KEY
+        generateValue: true
+      - key: USE_MOCK_DATA
         value: "true"
-      - key: ENABLE_PURCHASE_PREVENTION
-        value: "true"
+      - key: PRIMARY_CONNECTOR
+        value: "mock"
       - key: GEMINI_API_KEY
-        sync: false # Set in Render dashboard
-      - key: WEBHOOK_URL
-        value: "http://localhost:8000/api/webhook/mock"
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        value: "ShopPilotAlertsBot"
+      - key: AMAZON_PAAPI_KEY
+        sync: false
+      - key: AMAZON_PAAPI_SECRET
+        sync: false
+      - key: AMAZON_ASSOCIATE_TAG
+        sync: false
+      - key: FLIPKART_AFFILIATE_ID
+        sync: false
+      - key: FLIPKART_AFFILIATE_TOKEN
+        sync: false
 
-  # Frontend Next.js Service
+  # 2. Frontend Next.js Modern UI Service
   - type: web
     name: shoppilot-frontend
     env: docker
@@ -32,6 +62,7 @@ services:
     dockerContext: frontend
     plan: free
     region: singapore
+    healthCheckPath: /
     envVars:
       - key: PORT
         value: 3000
@@ -45,3 +76,10 @@ services:
           name: shoppilot-backend
           type: web
           property: host
+      - key: NEXT_PUBLIC_APP_URL
+        value: "https://shoppilot-frontend-fo5e.onrender.com"
+      - key: NEXT_PUBLIC_ADMIN_KEY
+        fromService:
+          name: shoppilot-backend
+          type: web
+          envVarKey: ADMIN_SECRET_KEY

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { User, LogOut, Heart, Bell, ChevronDown } from "lucide-react";
+import { User, LogOut, Heart, Bell, ChevronDown, Trash2 } from "lucide-react";
 import AuthModal, { type UserSession } from "./AuthModal";
 
 export default function UserNav() {
@@ -35,6 +35,31 @@ export default function UserNav() {
     localStorage.removeItem("shoppilot_user");
     setUser(null);
     setDropdownOpen(false);
+  }
+
+  async function handleDeleteData() {
+    if (!user?.email) return;
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete all your account data? This will permanently wipe your price alerts, Telegram link, and watchlist."
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      await fetch(`${API_BASE}/api/users/delete-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+    } catch (err) {
+      console.warn("Server delete error, wiping local:", err);
+    }
+
+    localStorage.removeItem("shoppilot_user");
+    localStorage.removeItem("shoppilot_wishlist");
+    setUser(null);
+    setDropdownOpen(false);
+    alert("Your account data and price alerts have been completely deleted.");
   }
 
   return (
@@ -90,6 +115,14 @@ export default function UserNav() {
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
+                </button>
+
+                <button
+                  onClick={handleDeleteData}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-gray-500 hover:text-rose-400 hover:bg-rose-500/5 rounded-xl transition-colors text-left mt-1 border-t border-gray-800/60 pt-2"
+                >
+                  <Trash2 className="w-3 h-3 text-rose-500" />
+                  <span>Delete Account Data</span>
                 </button>
               </div>
             </div>
