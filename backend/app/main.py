@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import math
+import os
 import re
 from datetime import date, timedelta
 from typing import Dict, List, Any, Optional
@@ -74,9 +75,18 @@ app = FastAPI(
 )
 
 # Enable CORS for Next.js frontend
+frontend_env = os.getenv("FRONTEND_URL", "").strip()
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://shoppilot-frontend-fo5e.onrender.com",
+]
+if frontend_env:
+    allowed_origins.append(frontend_env)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins if frontend_env else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

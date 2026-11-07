@@ -1,18 +1,20 @@
 # Render Blueprint Specification for ShopPilot
 services:
-  # Backend FastAPI & Playwright Service
+  # Backend FastAPI Service
   - type: web
     name: shoppilot-backend
     env: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
     plan: free
-    region: oregon
+    region: singapore
     envVars:
       - key: PORT
         value: 8000
       - key: HOST
         value: 0.0.0.0
+      - key: FRONTEND_URL
+        value: "https://shoppilot-frontend-fo5e.onrender.com"
       - key: HEADLESS
         value: "true"
       - key: ENABLE_PURCHASE_PREVENTION
@@ -29,7 +31,7 @@ services:
     dockerfilePath: frontend/Dockerfile
     dockerContext: frontend
     plan: free
-    region: oregon
+    region: singapore
     envVars:
       - key: PORT
         value: 3000
