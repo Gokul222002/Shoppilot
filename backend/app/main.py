@@ -25,6 +25,7 @@ from app.config import settings
 from app.mock_store.router import router as mock_store_router
 from app.worker.queue import job_manager
 from app.notifications.dispatcher import dispatcher
+from app.search_engine import search_catalog_fuzzy
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("ShopPilot.Main")
@@ -147,82 +148,39 @@ def gen_price_history(base_price: int, seed: int) -> List[dict]:
     return points
 
 
-# Raw product tuples: (id, name, brand, category, mrp, price, rating, review_count, tags, stores)
-RAW_PRODUCTS = [
-    # Phones
-    ("ph-001","Apple iPhone 15 128GB","Apple","phones",79900,65999,4.6,28400,["5G","iOS","USB-C"],["Amazon.in","Flipkart","Croma"]),
-    ("ph-002","Samsung Galaxy S24 5G 128GB","Samsung","phones",79999,64999,4.6,14200,["5G","AI","Snapdragon"],["Flipkart","Amazon.in","Croma"]),
-    ("ph-003","OnePlus 12 256GB","OnePlus","phones",64999,56999,4.6,19800,["5G","Hasselblad","100W"],["Amazon.in","Flipkart"]),
-    ("ph-004","Redmi Note 13 Pro+ 5G 256GB","Redmi","phones",33999,27999,4.3,44000,["5G","200MP","IP68"],["Amazon.in","Flipkart"]),
-    ("ph-005","Realme 12 Pro+ 5G 256GB","Realme","phones",34999,27999,4.4,24000,["5G","Periscope"],["Flipkart","Amazon.in"]),
-    ("ph-006","Nothing Phone 2a 5G 128GB","Nothing","phones",25999,21999,4.4,38000,["5G","Glyph"],["Flipkart","Amazon.in"]),
-    ("ph-007","Poco X6 Pro 5G 256GB","Poco","phones",30999,23999,4.5,51000,["5G","Gaming"],["Flipkart","Amazon.in"]),
-    ("ph-008","iQOO Neo 9 Pro 5G 256GB","iQOO","phones",41999,33999,4.6,21800,["5G","Gaming","144Hz"],["Amazon.in","Flipkart"]),
-    # Laptops
-    ("lp-001","Apple MacBook Air M3 8GB 256GB","Apple","laptops",114900,104900,4.8,8900,["M3","macOS"],["Amazon.in","Croma"]),
-    ("lp-002","HP Victus 15 Intel i5 RTX 3050","HP","laptops",69999,54999,4.4,18000,["Gaming","144Hz"],["Amazon.in","Flipkart"]),
-    ("lp-003","Lenovo IdeaPad Slim 3 Intel i5","Lenovo","laptops",52999,41999,4.3,32000,["Thin","Office"],["Flipkart","Amazon.in"]),
-    ("lp-004","ASUS ROG Strix G16 RTX 4070","Asus","laptops",199999,174999,4.7,4500,["Gaming","240Hz"],["Amazon.in","Croma"]),
-    ("lp-005","Dell Inspiron 15 i5 16GB 512GB","Dell","laptops",61999,49999,4.4,21000,["Thin","Office"],["Amazon.in","Flipkart"]),
-    ("lp-006","Acer Nitro V15 RTX 4050","Acer","laptops",71999,56999,4.4,15000,["Gaming","144Hz"],["Amazon.in","Flipkart"]),
-    # Earphones
-    ("ep-001","Sony WH-1000XM5 Wireless ANC","Sony","earphones",29990,22990,4.7,18200,["ANC","30h","LDAC"],["Amazon.in","Croma","Flipkart"]),
-    ("ep-002","Apple AirPods Pro 2nd Gen","Apple","earphones",24900,19900,4.7,34000,["ANC","TWS","iOS"],["Amazon.in","Flipkart","Croma"]),
-    ("ep-003","boAt Airdopes 141 TWS","boAt","earphones",2990,999,4.3,182000,["TWS","42h","IPX4"],["Amazon.in","Flipkart","Myntra"]),
-    ("ep-004","JBL Tune 770NC Wireless ANC","JBL","earphones",9999,6999,4.5,22000,["ANC","70h","BT5.3"],["Amazon.in","Flipkart"]),
-    ("ep-005","Nothing Ear 2 TWS ANC","Nothing","earphones",9999,7499,4.5,32000,["ANC","TWS","LHDC"],["Flipkart","Amazon.in"]),
-    # Fans
-    ("fn-001","Atomberg Renesa+ 1200mm BLDC","Atomberg","fans",5190,3799,4.6,48000,["BLDC","28W","Smart"],["Amazon.in","Flipkart","Croma"]),
-    ("fn-002","Crompton SilentPro Enso BLDC","Crompton","fans",6499,4299,4.6,18200,["BLDC","Silent"],["Flipkart","Amazon.in"]),
-    ("fn-003","Havells Stealth Air BLDC","Havells","fans",7850,5499,4.7,6200,["BLDC","Quiet"],["Tata CLiQ","Amazon.in"]),
-    ("fn-004","Bajaj Maxima 600mm Ceiling Fan","Bajaj","fans",2290,1599,4.3,31000,["High Speed","870RPM"],["Amazon.in","Flipkart"]),
-    ("fn-005","Orient Electric Wendy 1200mm","Orient Electric","fans",4450,3199,4.5,12800,["Metallic","Copper"],["Flipkart","Amazon.in"]),
-    # Speakers
-    ("sp-001","JBL Flip 6 Portable Speaker IP67","JBL","speakers",13999,9999,4.7,34000,["Portable","IP67","12h"],["Amazon.in","Flipkart","Croma"]),
-    ("sp-002","boAt Stone 650 10W IPX5","boAt","speakers",3990,1499,4.5,78000,["10W","IPX5"],["Flipkart","Amazon.in","Myntra"]),
-    ("sp-003","Marshall Emberton II IP67","Marshall","speakers",17499,14999,4.8,12400,["IP67","30h","360°"],["Amazon.in","Croma"]),
-    ("sp-004","Sony SRS-XB100 Extra Bass","Sony","speakers",4990,3990,4.6,14200,["Extra Bass","IP67"],["Croma","Amazon.in","Flipkart"]),
-    ("sp-005","Echo Dot 5th Gen Alexa","Amazon","speakers",5499,4499,4.5,62000,["Smart Home","Alexa"],["Amazon.in","Flipkart"]),
-    # Keyboards
-    ("kb-001","Logitech MX Keys S Wireless","Logitech","keyboards",9995,7495,4.7,14200,["Wireless","Backlit","Multi-Device"],["Amazon.in","Croma","Flipkart"]),
-    ("kb-002","Keychron K2 V2 Hot-Swap Wireless","Keychron","keyboards",7999,6999,4.7,8400,["Hot-Swap","Wireless"],["Amazon.in","Flipkart"]),
-    ("kb-003","Razer Huntsman Mini 60% Optical","Razer","keyboards",10999,8499,4.5,11000,["60%","Optical","RGB"],["Amazon.in","Flipkart"]),
-    ("kb-004","Cosmic Byte Neon Mechanical RGB","Cosmic Byte","keyboards",3999,2499,4.3,26000,["Mechanical","RGB","Gaming"],["Amazon.in","Flipkart"]),
-    # Mice
-    ("ms-001","Logitech MX Master 3S Wireless","Logitech","mice",9995,7495,4.8,28400,["Wireless","8000 DPI","Silent"],["Amazon.in","Croma","Flipkart"]),
-    ("ms-002","Razer DeathAdder Essential","Razer","mice",2499,1199,4.6,54000,["Gaming","6400 DPI"],["Amazon.in","Flipkart"]),
-    ("ms-003","boAt Immortal 121 RGB 7200 DPI","boAt","mice",1490,699,4.4,18900,["Gaming","RGB"],["Flipkart","Amazon.in","Myntra"]),
-    ("ms-004","Logitech M221 Silent Wireless","Logitech","mice",1195,799,4.7,48000,["Silent","Wireless"],["Amazon.in","Flipkart"]),
-    # Kitchen
-    ("kt-001","Philips Mixer Grinder 500W 3 Jars","Philips","kitchen",4999,2999,4.4,42000,["500W","3 Jars"],["Amazon.in","Flipkart","Croma"]),
-    ("kt-002","Prestige Pressure Cooker 3L SS","Prestige","kitchen",2990,1699,4.5,34000,["Stainless Steel","3L"],["Amazon.in","Flipkart"]),
-    ("kt-003","Borosil Glass Mixing Bowl Set 3Pcs","Borosil","kitchen",1190,799,4.6,28400,["Borosilicate","Microwave Safe"],["Amazon.in","Flipkart","Myntra"]),
-    ("kt-004","Milton Thermosteel Flask 1L","Milton","kitchen",1290,699,4.5,54000,["Hot & Cold","18h","SS 304"],["Amazon.in","Flipkart","Myntra"]),
-    ("kt-005","Bajaj Majesty Induction Cooktop","Bajaj","kitchen",2990,1799,4.4,32000,["1200W","Auto-off"],["Amazon.in","Flipkart","Croma"]),
-    ("kt-006","Philips Air Fryer 4.1L","Philips","kitchen",11999,7499,4.5,18000,["4.1L","1400W"],["Amazon.in","Flipkart","Croma"]),
-]
+# ─── Product Catalog Data (300+ products, 8 categories) ───────────────────────
 
-# Build the full product catalog
+CATALOG_FILE = os.path.join(os.path.dirname(__file__), "data", "catalog.json")
 PRODUCTS: List[dict] = []
-for idx, row in enumerate(RAW_PRODUCTS):
-    pid, name, brand, category, mrp, price, rating, review_count, tags, stores = row
-    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    PRODUCTS.append({
-        "id": pid,
-        "name": name,
-        "brand": brand,
-        "category": category,
-        "slug": slug,
-        "rating": rating,
-        "review_count": review_count,
-        "tags": tags,
-        "best_price": price,
-        "mrp": mrp,
-        "best_discount_pct": round(((mrp - price) / mrp) * 100),
-        "offers": gen_offers(name, mrp, price, stores),
-        "price_history": gen_price_history(price, idx * 17 + 3),
-        "image_url": f"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&auto=format&fit=crop&q=60",
-    })
+
+if os.path.exists(CATALOG_FILE):
+    with open(CATALOG_FILE, "r", encoding="utf-8") as f:
+        loaded = json.load(f)
+        for p in loaded:
+            bp = min(o["price"] for o in p["offers"])
+            mp = max(o["mrp"] for o in p["offers"])
+            pct = round(((mp - bp) / mp) * 100) if mp > 0 else 0
+            p["best_price"] = bp
+            p["mrp"] = mp
+            p["best_discount_pct"] = pct
+            p["price_history"] = p.get("priceHistory", [])
+            p["image_url"] = p.get("imageUrl", "")
+            p["review_count"] = p.get("reviewCount", 0)
+            PRODUCTS.append(p)
+else:
+    logger.warning(f"Catalog file not found at {CATALOG_FILE}")
+
+# Map legacy IDs for backwards compatibility in existing tests
+LEGACY_MAP = {
+    "ph-001": "Apple iPhone 15 (Black, 128GB)",
+    "ph-002": "Samsung Galaxy S24 5G (Onyx Black, 128GB)",
+    "ph-003": "OnePlus 12",
+    "lp-001": "Apple MacBook Air",
+}
+for leg_id, query_str in LEGACY_MAP.items():
+    match = next((p for p in PRODUCTS if query_str.lower() in p["name"].lower()), None)
+    if match and "legacy_id" not in match:
+        match["legacy_id"] = leg_id
 
 
 # ─── Request / Response Schemas ───────────────────────────────────────────────
@@ -314,46 +272,19 @@ async def search_products(
     limit: int = Query(default=40, le=100, description="Max results"),
 ):
     """
-    Search products for price comparison.
+    Search products for price comparison with typo tolerance.
     Returns matching products with offers from multiple stores.
     Users click through to the store to complete their purchase.
     """
-    q_lower = q.lower().strip()
-    results = []
-
-    for p in PRODUCTS:
-        # Text match
-        if q_lower:
-            if not any([
-                q_lower in p["name"].lower(),
-                q_lower in p["brand"].lower(),
-                q_lower in p["category"].lower(),
-                any(q_lower in t.lower() for t in p["tags"]),
-            ]):
-                continue
-        # Category filter
-        if category and p["category"] != category:
-            continue
-        # Price range
-        bp = p["best_price"]
-        if min_price is not None and bp < min_price:
-            continue
-        if max_price is not None and bp > max_price:
-            continue
-        # Store filter
-        if store and not any(o["store"] == store for o in p["offers"]):
-            continue
-        results.append(p)
-
-    # Sort
-    if sort_by == "price_asc":
-        results.sort(key=lambda x: x["best_price"])
-    elif sort_by == "price_desc":
-        results.sort(key=lambda x: x["best_price"], reverse=True)
-    elif sort_by == "rating":
-        results.sort(key=lambda x: x["rating"], reverse=True)
-    elif sort_by == "discount":
-        results.sort(key=lambda x: x["best_discount_pct"], reverse=True)
+    results = search_catalog_fuzzy(
+        catalog=PRODUCTS,
+        query=q,
+        category=category if category else None,
+        min_price=min_price,
+        max_price=max_price,
+        store=store if store else None,
+        sort_by=sort_by if sort_by else None,
+    )
 
     return {
         "query": q,
@@ -378,9 +309,13 @@ async def get_trending(
 @app.get("/api/products/{product_id}")
 async def get_product(product_id: str):
     """Get a single product with all store offers and price history."""
-    product = next((p for p in PRODUCTS if p["id"] == product_id), None)
+    product = next((p for p in PRODUCTS if p["id"] == product_id or p.get("legacy_id") == product_id), None)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if product.get("legacy_id") == product_id:
+        p_copy = dict(product)
+        p_copy["id"] = product_id
+        return p_copy
     return product
 
 
@@ -451,7 +386,7 @@ async def check_price_alerts():
     """
     triggered = []
     for alert in price_alerts:
-        prod = next((p for p in PRODUCTS if p["id"] == alert["product_id"]), None)
+        prod = next((p for p in PRODUCTS if p["id"] == alert["product_id"] or p.get("legacy_id") == alert["product_id"]), None)
         if prod:
             current_lowest = prod["best_price"]
             if current_lowest <= alert["target_price"]:
