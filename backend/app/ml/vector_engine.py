@@ -2,16 +2,24 @@
 Vector Embeddings & Semantic Search Engine (ShopPilot Phase D)
 Provides hybrid vector search, Gemini embedding integration with local dense vectorizer fallback,
 and ML-driven 'Similar Products' and 'People Also Compared' recommendation clustering.
+Gracefully falls back to pure-Python TF cosine similarity if scikit-learn/numpy are unavailable.
 """
 
 import os
 import re
 import json
+import math
 import logging
+from collections import Counter
 from typing import List, Dict, Any, Optional, Tuple
 
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
+try:
+    import numpy as np
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+    np = None
 
 logger = logging.getLogger("ShopPilot.ML.VectorEngine")
 
@@ -24,19 +32,42 @@ def clean_text(text: str) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
+def tokenize(text: str) -> List[str]:
+    return [w for w in clean_text(text).split() if len(w) > 1]
+
+
+def pure_cosine(vec1: Dict[str, float], vec2: Dict[str, float]) -> float:
+    common = set(vec1).intersection(vec2)
+    if not common:
+        return 0.0
+    dot = sum(vec1[w] * vec2[w] for w in common)
+    n1 = math.sqrt(sum(v * v for v in vec1.values()))
+    n2 = math.sqrt(sum(v * v for v in vec2.values()))
+    if n1 == 0.0 or n2 == 0.0:
+        return 0.0
+    return dot / (n1 * n2)
+
+
 class VectorEngine:
     def __init__(self, catalog_path: Optional[str] = None):
         self.catalog_path = catalog_path or CATALOG_PATH
         self.products: List[Dict[str, Any]] = []
         self.product_map: Dict[str, Dict[str, Any]] = {}
-        self.product_vectors: Optional[np.ndarray] = None
-        self.vectorizer = TfidfVectorizer(
-            ngram_range=(1, 3),
-            max_features=512,
-            sublinear_tf=True,
-            token_pattern=r"(?u)\b[\w-]+\b"
-        )
+        self.product_vectors = None
+        self.product_bow: Dict[str, Dict[str, float]] = {}
         self.is_fitted = False
+
+        if HAS_SKLEARN:
+            self.vectorizer = TfidfVectorizer(
+                ngram_range=(1, 3),
+                max_features=512,
+                sublinear_tf=True,
+                token_pattern=r"(?u)\b[\w-]+\b"
+            )
+        else:
+            self.vectorizer = None
+            logger.warning("[VectorEngine] Scikit-learn/numpy not installed. Running in pure-Python semantic fallback mode.")
+
         self._load_and_index()
 
     def _build_product_document(self, p: Dict[str, Any]) -> str:
@@ -49,7 +80,6 @@ class VectorEngine:
             f"category {p.get('category', '')}",
             f"brand {p.get('brand', '')}",
         ]
-        # Include spec tags and description
         if "specs" in p and isinstance(p["specs"], dict):
             for k, v in p["specs"].items():
                 parts.append(f"{k} {v}")
@@ -71,11 +101,12 @@ class VectorEngine:
                 self.products.append(p)
             self.product_map = {p["id"]: p for p in self.products}
 
-        # Build corpus
         corpus = [self._build_product_document(p) for p in self.products]
-        if corpus:
+        if not corpus:
+            return
+
+        if HAS_SKLEARN:
             tfidf_matrix = self.vectorizer.fit_transform(corpus).toarray()
-            # L2 Normalize
             norms = np.linalg.norm(tfidf_matrix, axis=1, keepdims=True)
             norms[norms == 0] = 1.0
             self.product_vectors = tfidf_matrix / norms
@@ -83,26 +114,43 @@ class VectorEngine:
             logger.info(
                 f"[VectorEngine] Fitted local dense vectorizer on {len(self.products)} products (shape: {self.product_vectors.shape})."
             )
+        else:
+            # Pure-Python Term Frequency indexing
+            for p, doc in zip(self.products, corpus):
+                tokens = tokenize(doc)
+                self.product_bow[p["id"]] = dict(Counter(tokens))
+            self.is_fitted = True
+            logger.info(
+                f"[VectorEngine] Indexed {len(self.products)} products with pure-Python token engine."
+            )
 
-    def encode_text(self, text: str) -> np.ndarray:
+    def encode_text(self, text: str):
         """Encodes text query into normalized embedding vector."""
         if not self.is_fitted:
-            return np.zeros((1, 512))
+            return np.zeros((1, 512)) if HAS_SKLEARN else {}
         clean = clean_text(text)
-        vec = self.vectorizer.transform([clean]).toarray()
-        norm = np.linalg.norm(vec)
-        if norm > 0:
-            vec = vec / norm
-        return vec
+        if HAS_SKLEARN:
+            vec = self.vectorizer.transform([clean]).toarray()
+            norm = np.linalg.norm(vec)
+            if norm > 0:
+                vec = vec / norm
+            return vec
+        else:
+            return dict(Counter(tokenize(clean)))
 
     def compute_similarity(self, text_a: str, text_b: str) -> float:
         """Computes cosine similarity between two text strings."""
         if not self.is_fitted:
             return 0.0
-        vec_a = self.encode_text(text_a)
-        vec_b = self.encode_text(text_b)
-        score = float(np.dot(vec_a, vec_b.T)[0, 0])
-        return max(0.0, min(1.0, round(score, 4)))
+        if HAS_SKLEARN:
+            vec_a = self.encode_text(text_a)
+            vec_b = self.encode_text(text_b)
+            score = float(np.dot(vec_a, vec_b.T)[0, 0])
+            return max(0.0, min(1.0, round(score, 4)))
+        else:
+            bow_a = dict(Counter(tokenize(text_a)))
+            bow_b = dict(Counter(tokenize(text_b)))
+            return max(0.0, min(1.0, round(pure_cosine(bow_a, bow_b), 4)))
 
     def parse_query_intent(self, query: str) -> Dict[str, Any]:
         """
@@ -117,7 +165,6 @@ class VectorEngine:
         extracted_min_price: Optional[int] = None
         extracted_brand: Optional[str] = None
 
-        # Category mapping
         cat_lemmas = {
             "phone": "mobiles", "mobile": "mobiles", "phones": "mobiles", "mobiles": "mobiles", "smartphone": "mobiles", "smartphones": "mobiles",
             "laptop": "laptops", "laptops": "laptops", "notebook": "laptops", "macbook": "laptops",
@@ -134,7 +181,6 @@ class VectorEngine:
                 extracted_category = cat
                 break
 
-        # Budget extraction: 'under 20000', 'under 20k', 'below 25000', '< 30000'
         budget_match = re.search(
             r"(?:under|below|less than|within|budget of|<|<=)\s*(?:rs\.?|inr|₹)?\s*(\d+(?:\.\d+)?)\s*(k|thousand|l|lakh)?",
             q_lower
@@ -149,7 +195,6 @@ class VectorEngine:
             else:
                 extracted_max_price = int(num)
 
-        # Brand extraction
         known_brands = [
             "realme", "samsung", "apple", "oneplus", "xiaomi", "redmi", "vivo", "oppo",
             "motorola", "poco", "iqoo", "dell", "hp", "lenovo", "asus", "acer", "sony",
@@ -160,7 +205,6 @@ class VectorEngine:
                 extracted_brand = b
                 break
 
-        # Semantic keywords cleanup & intent expansion
         residual = q_lower
         if budget_match:
             residual = residual.replace(budget_match.group(0), " ")
@@ -169,7 +213,6 @@ class VectorEngine:
                 residual = re.sub(r"\b" + re.escape(lemma) + r"\b", " ", residual)
         residual = clean_text(residual)
 
-        # Domain semantic expansions
         expansions = []
         if any(term in q_lower for term in ("camera", "photo", "cam", "lens", "video", "sensor")):
             expansions.extend(["camera", "cam", "mp", "ois", "periscope", "telephoto", "portrait", "sensor", "megapixels"])
@@ -214,35 +257,36 @@ class VectorEngine:
         min_p_filter = min_price or intent["min_price"]
         brand_filter = brand or intent["brand"]
 
-        # Encode search query (using full query + emphasized semantic terms)
         query_text = f"{query} {intent['semantic_terms']}"
-        q_vec = self.encode_text(query_text)
 
-        # Calculate cosine similarity with all products
-        sim_scores = np.dot(self.product_vectors, q_vec.T).flatten()
+        if HAS_SKLEARN:
+            q_vec = self.encode_text(query_text)
+            sim_scores = np.dot(self.product_vectors, q_vec.T).flatten()
+        else:
+            q_bow = dict(Counter(tokenize(query_text)))
 
         candidates = []
         for idx, p in enumerate(self.products):
-            # Check structured category filter
             if cat_filter and p.get("category", "").lower() != cat_filter.lower():
                 continue
-
-            # Check structured brand filter
             if brand_filter and p.get("brand", "").lower() != brand_filter.lower():
                 continue
 
-            # Check price filters
             price = p.get("best_price", 0)
             if max_p_filter and price > max_p_filter:
                 continue
             if min_p_filter and price < min_p_filter:
                 continue
 
-            sim = float(sim_scores[idx])
+            if HAS_SKLEARN:
+                sim = float(sim_scores[idx])
+            else:
+                p_bow = self.product_bow.get(p["id"], {})
+                sim = pure_cosine(q_bow, p_bow)
+
             if sim <= 0.0:
                 continue
 
-            # Boost score with rating & review signals
             rating_boost = (p.get("rating", 4.0) / 5.0) * 0.15
             final_score = sim + rating_boost
 
@@ -251,7 +295,6 @@ class VectorEngine:
             p_copy["combined_score"] = round(final_score, 4)
             candidates.append((final_score, p_copy))
 
-        # Sort descending by score
         candidates.sort(key=lambda x: x[0], reverse=True)
         return [c[1] for c in candidates[:limit]]
 
@@ -264,15 +307,17 @@ class VectorEngine:
             return []
 
         target = self.product_map[product_id]
-        target_idx = next(i for i, p in enumerate(self.products) if p["id"] == product_id)
-        target_vec = self.product_vectors[target_idx]
-
         target_cat = target.get("category")
         target_price = target.get("best_price", 1000)
         min_p = target_price * 0.65
         max_p = target_price * 1.35
 
-        sim_scores = np.dot(self.product_vectors, target_vec.T).flatten()
+        if HAS_SKLEARN:
+            target_idx = next(i for i, p in enumerate(self.products) if p["id"] == product_id)
+            target_vec = self.product_vectors[target_idx]
+            sim_scores = np.dot(self.product_vectors, target_vec.T).flatten()
+        else:
+            target_bow = self.product_bow.get(product_id, {})
 
         matches = []
         for idx, p in enumerate(self.products):
@@ -283,7 +328,12 @@ class VectorEngine:
             if not (min_p <= p.get("best_price", 0) <= max_p):
                 continue
 
-            matches.append((float(sim_scores[idx]), p))
+            if HAS_SKLEARN:
+                sim = float(sim_scores[idx])
+            else:
+                sim = pure_cosine(target_bow, self.product_bow.get(p["id"], {}))
+
+            matches.append((sim, p))
 
         matches.sort(key=lambda x: x[0], reverse=True)
         return [m[1] for m in matches[:limit]]
@@ -297,16 +347,18 @@ class VectorEngine:
             return []
 
         target = self.product_map[product_id]
-        target_idx = next(i for i, p in enumerate(self.products) if p["id"] == product_id)
-        target_vec = self.product_vectors[target_idx]
-
         target_cat = target.get("category")
         target_brand = target.get("brand", "").lower()
         target_price = target.get("best_price", 1000)
         min_p = target_price * 0.60
         max_p = target_price * 1.40
 
-        sim_scores = np.dot(self.product_vectors, target_vec.T).flatten()
+        if HAS_SKLEARN:
+            target_idx = next(i for i, p in enumerate(self.products) if p["id"] == product_id)
+            target_vec = self.product_vectors[target_idx]
+            sim_scores = np.dot(self.product_vectors, target_vec.T).flatten()
+        else:
+            target_bow = self.product_bow.get(product_id, {})
 
         alternatives = []
         for idx, p in enumerate(self.products):
@@ -314,13 +366,17 @@ class VectorEngine:
                 continue
             if p.get("category") != target_cat:
                 continue
-            # Must be a competing brand
             if p.get("brand", "").lower() == target_brand:
                 continue
             if not (min_p <= p.get("best_price", 0) <= max_p):
                 continue
 
-            alternatives.append((float(sim_scores[idx]), p))
+            if HAS_SKLEARN:
+                sim = float(sim_scores[idx])
+            else:
+                sim = pure_cosine(target_bow, self.product_bow.get(p["id"], {}))
+
+            alternatives.append((sim, p))
 
         alternatives.sort(key=lambda x: x[0], reverse=True)
         return [a[1] for a in alternatives[:limit]]

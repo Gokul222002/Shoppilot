@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install system dependencies required by Playwright Chromium
+# Install system dependencies required by Playwright Chromium and Scikit-Learn OpenMP
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libcairo2 \
     libasound2 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
