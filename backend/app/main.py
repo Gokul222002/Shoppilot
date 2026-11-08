@@ -81,12 +81,12 @@ class SecurityAndRateLimitMiddleware(BaseHTTPMiddleware):
         self.request_history: Dict[str, List[float]] = {}
         # Max requests per 60 seconds
         self.rate_limits = {
-            "/api/assistant": 20,
-            "/api/alerts/telegram/code": 15,
-            "/api/alerts/telegram/link": 20,
-            "/api/search": 50,
-            "/api/alerts": 30,
-            "default": 150,
+            "/api/assistant": 120,
+            "/api/alerts/telegram/code": 30,
+            "/api/alerts/telegram/link": 40,
+            "/api/search": 120,
+            "/api/alerts": 60,
+            "default": 300,
         }
 
     async def dispatch(self, request: Request, call_next):
@@ -107,8 +107,12 @@ class SecurityAndRateLimitMiddleware(BaseHTTPMiddleware):
                     content={"detail": "Unauthorized: Valid X-Admin-Key header required."},
                 )
 
-        # 2. Rate Limiting Check
-        client_ip = request.client.host if request.client else "127.0.0.1"
+        # 2. Rate Limiting Check (Honor X-Forwarded-For behind Render / Cloudflare reverse proxies)
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "127.0.0.1"
         now = time.time()
         bypass = request.headers.get("X-Test-Bypass-Rate-Limit") == "true" or os.getenv("DISABLE_RATE_LIMIT") == "1"
 
@@ -193,19 +197,10 @@ app = FastAPI(
 
 app.add_middleware(SecurityAndRateLimitMiddleware)
 
-# Enable CORS for Next.js frontend
-frontend_env = os.getenv("FRONTEND_URL", "").strip()
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://shoppilot-frontend-fo5e.onrender.com",
-]
-if frontend_env:
-    allowed_origins.append(frontend_env)
-
+# Enable CORS with origin regex to support all preview/production Render URLs, localhost, and custom domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if frontend_env else ["*"],
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
