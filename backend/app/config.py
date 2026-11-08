@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     
     # AI / Vision LLM
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", "")
-    VISION_MODEL_NAME: str = "gemini-1.5-flash"  # or gemini-2.0-flash
+    VISION_MODEL_NAME: str = os.getenv("VISION_MODEL_NAME", "gemini-3.1-flash-lite")
     
     # Browser Automation
     HEADLESS: bool = True
