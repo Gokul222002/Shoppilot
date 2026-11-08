@@ -6,10 +6,7 @@ import {
   Bot,
   Sparkles,
   Send,
-  ArrowRight,
-  TrendingDown,
   RotateCcw,
-  Store,
   ChevronRight,
   HelpCircle,
 } from "lucide-react";
@@ -272,76 +269,6 @@ export default function AssistantPage() {
                   <div className="flex items-center justify-between pt-2 border-t border-gray-800/80 text-[10px] text-gray-500 font-mono">
                     <span>Engine: {msg.model}</span>
                     <span className="text-emerald-400/80">● Grounded in Real Catalog</span>
-                  </div>
-                )}
-
-                {/* Embedded Product Cards */}
-                {msg.products && msg.products.length > 0 && (
-                  <div className="pt-3 border-t border-gray-800/80 space-y-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
-                      <TrendingDown className="w-3.5 h-3.5" />
-                      Live Verified Store Offers:
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {msg.products.map((p: any) => {
-                        const price = p.best_price ?? p.price ?? 999;
-                        const mrp = p.mrp ?? Math.round(price * 1.25);
-                        const store = p.best_store || (p.offers && p.offers[0]?.store) || "Amazon.in";
-                        const slug = p.slug ?? p.id;
-                        const rating = p.rating ?? 4.5;
-
-                        return (
-                          <div
-                            key={p.id}
-                            className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-3.5 flex flex-col justify-between gap-3 transition-colors shadow-sm"
-                          >
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-[10px] uppercase font-bold text-orange-400 tracking-wider">
-                                  {p.brand || "Verified Brand"}
-                                </span>
-                                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-semibold">
-                                  ★ {rating}
-                                </span>
-                              </div>
-                              <h4 className="text-xs font-bold text-white line-clamp-2 leading-snug">
-                                {p.name}
-                              </h4>
-                              <div className="flex items-baseline gap-2 mt-2">
-                                <span className="text-base font-extrabold text-white">
-                                  ₹{price.toLocaleString("en-IN")}
-                                </span>
-                                <span className="text-xs text-gray-500 line-through">
-                                  ₹{mrp.toLocaleString("en-IN")}
-                                </span>
-                              </div>
-                              <div className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
-                                <Store className="w-3 h-3 text-orange-400" />
-                                <span>Best price on </span>
-                                <strong className="text-gray-200">{store}</strong>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-1 border-t border-gray-800">
-                              <Link
-                                href={`/compare?q=${encodeURIComponent(slug)}`}
-                                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white font-semibold text-xs py-1.5 px-3 rounded-lg flex items-center justify-center gap-1 transition-colors"
-                              >
-                                <span>Compare Stores</span>
-                                <ArrowRight className="w-3 h-3" />
-                              </Link>
-                              <Link
-                                href={`/price-history/${encodeURIComponent(slug)}`}
-                                className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium text-xs py-1.5 px-2.5 rounded-lg flex items-center justify-center transition-colors"
-                                title="12-Month Price History"
-                              >
-                                <TrendingDown className="w-3.5 h-3.5" />
-                              </Link>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
                   </div>
                 )}
 
