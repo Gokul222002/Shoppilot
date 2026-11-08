@@ -159,7 +159,10 @@ def execute_tool(func_name: str, args: Dict[str, Any]) -> Any:
     return {"error": f"Unknown tool: {func_name}"}
 
 
-async def ask_gemini_with_tools(user_query: str) -> Optional[Tuple[str, List[Dict[str, Any]]]]:
+async def ask_gemini_with_tools(
+    user_query: str,
+    history: Optional[List[Dict[str, str]]] = None,
+) -> Optional[Tuple[str, List[Dict[str, Any]]]]:
     """
     Calls Gemini API with Function Calling Tools.
     Returns (assistant_markdown_response, referenced_products).
@@ -170,34 +173,51 @@ async def ask_gemini_with_tools(user_query: str) -> Optional[Tuple[str, List[Dic
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.VISION_MODEL_NAME}:generateContent?key={api_key}"
     system_instruction = (
-        "You are the ShopPilot AI Shopping Advisor. "
-        "ShopPilot is strictly a price comparison and tracking app (NO cart, NO checkout, NO selling). "
-        "For any query asking about a product, price, store, deal, or comparison, you MUST first call the appropriate tool "
+        "You are the ShopPilot AI Shopping Advisor, a top-tier consumer technology and price intelligence expert for Indian shoppers. "
+        "ShopPilot is strictly a price comparison and tracking app (NO cart, NO checkout, NO direct selling). "
+        "Your mission is to provide deeply knowledgeable, objective, and comprehensive shopping advice, including: "
+        "1. In-depth technical specifications, real-world pros and cons, and performance evaluations (e.g. gaming, camera, battery, display). "
+        "2. Side-by-side comparison tables with clear winners for specific user needs. "
+        "3. Practical context (e.g. whether headphones are sweat-resistant for gym workouts, display refresh rates, or charging speeds). "
+        "4. Price verification: Whenever referencing product prices, storage variants, or stores, you MUST call the appropriate tool "
         "(searchProducts, getFamily, compareFamilies, getOffers, or getPriceHistory). "
-        "Answer strictly based on verified facts returned by tools. Never recommend unrelated brands. "
-        "Never cite competitor scraping tools (BuyHatke, etc.). Only cite connected stores: Amazon.in, Flipkart, Croma, Tata CLiQ, Myntra."
+        "Strict Grounding Rules: "
+        "- Ground all prices and store names strictly in tool responses. Never invent fake prices or fake stores. "
+        "- Always cite authorized Indian retailers: Amazon.in, Flipkart, Croma, Tata CLiQ, and Myntra. "
+        "- Format responses in clean GitHub-flavored markdown with bold headers, bullet points, and specification comparison tables when helpful. "
+        "- Maintain conversational continuity: if the user asks a follow-up referring to 'it', 'the phone', or 'that model', use conversation history to resolve the product."
     )
+
+    # Build contents with conversation history for multi-turn context
+    contents = []
+    if history:
+        for turn in history[-6:]:
+            role = "model" if turn.get("role") in ("assistant", "model") else "user"
+            msg_text = turn.get("content", "").strip()
+            if msg_text:
+                contents.append({"role": role, "parts": [{"text": msg_text}]})
+
+    # Add current user query turn
+    contents.append({
+        "role": "user",
+        "parts": [{"text": user_query}],
+    })
 
     # Initial turn with tools declaration
     payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": user_query}],
-            }
-        ],
+        "contents": contents,
         "systemInstruction": {
             "parts": [{"text": system_instruction}]
         },
         "tools": GEMINI_TOOLS_DECLARATION,
         "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 1000,
+            "temperature": 0.25,
+            "maxOutputTokens": 1500,
         },
     }
 
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=35.0) as client:
             resp = await client.post(url, json=payload)
             if resp.status_code != 200:
                 logger.warning(f"Gemini API tool init error {resp.status_code}: {resp.text[:120]}")
@@ -240,11 +260,9 @@ async def ask_gemini_with_tools(user_query: str) -> Optional[Tuple[str, List[Dic
                     referenced_products.extend(tool_result.get("variants", []))
 
             # Second turn: Send tool responses back to Gemini for grounded response
-            conversation = [
-                {"role": "user", "parts": [{"text": user_query}]},
-                {"role": "model", "parts": parts},
-                {"role": "user", "parts": tool_responses},
-            ]
+            conversation = list(contents)
+            conversation.append({"role": "model", "parts": parts})
+            conversation.append({"role": "user", "parts": tool_responses})
 
             second_payload = {
                 "contents": conversation,

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { User, LogOut, Heart, Bell, ChevronDown, Trash2 } from "lucide-react";
+import { getApiBase } from "@/lib/api-config";
 import AuthModal, { type UserSession } from "./AuthModal";
 
 export default function UserNav() {
@@ -45,7 +46,7 @@ export default function UserNav() {
     if (!confirmDelete) return;
 
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const API_BASE = getApiBase();
       await fetch(`${API_BASE}/api/users/delete-data`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

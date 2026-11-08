@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { getApiBase } from "@/lib/api-config";
 import {
   ShieldCheck,
   RefreshCw,
@@ -101,7 +102,7 @@ export default function AdminPage() {
   const [syncingKey, setSyncingKey] = useState<string | null>(null);
   const [schedulerMessage, setSchedulerMessage] = useState<string | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const API_BASE = getApiBase();
   const ADMIN_HEADERS: Record<string, string> = {
     "X-Admin-Key": process.env.NEXT_PUBLIC_ADMIN_KEY || "shoppilot-admin-secret-2026",
   };

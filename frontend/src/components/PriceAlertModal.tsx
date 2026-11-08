@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Bell, X, CheckCircle, Mail, Tag, ShieldCheck } from "lucide-react";
+import { getApiBase } from "@/lib/api-config";
 import type { Product } from "@/lib/mock-connector";
 
 interface PriceAlertModalProps {
@@ -44,7 +45,7 @@ export default function PriceAlertModal({
     if (!email) return;
     setTelegramLoading(true);
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const API_BASE = getApiBase();
       const res = await fetch(`${API_BASE}/api/alerts/telegram/code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,7 +113,7 @@ export default function PriceAlertModal({
 
     // Call backend alert registration API
     try {
-      await fetch("http://127.0.0.1:8000/api/alerts", {
+      await fetch(`${getApiBase()}/api/alerts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

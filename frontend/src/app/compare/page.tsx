@@ -2,6 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { getApiBase } from "@/lib/api-config";
 import {
   Star,
   ShieldCheck,
@@ -122,7 +123,7 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
   let dealIntel: any = null;
 
   try {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    const API_BASE = getApiBase();
     const [simRes, compRes, foreRes, intRes] = await Promise.all([
       fetch(`${API_BASE}/api/products/${product.id}/similar?limit=4`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),
       fetch(`${API_BASE}/api/products/${product.id}/also-compared?limit=4`, { next: { revalidate: 60 } }).then((r) => (r.ok ? r.json() : null)),

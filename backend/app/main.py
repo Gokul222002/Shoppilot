@@ -149,10 +149,35 @@ class SecurityAndRateLimitMiddleware(BaseHTTPMiddleware):
 
 # ─── Lifespan ────────────────────────────────────────────────────────────────
 
+async def _keep_alive_pinger():
+    """Prevents Render Free tier from sleeping after 15 minutes of idle time.
+    Sends lightweight heartbeats every 9 minutes to keep backend & frontend hot.
+    """
+    await asyncio.sleep(60)  # Wait 60s for server boot
+    urls = [
+        "https://shoppilot-backend-jts2.onrender.com/health",
+        "https://shoppilot-frontend-fo5e.onrender.com/",
+    ]
+    while True:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                for u in urls:
+                    try:
+                        r = await client.get(u, headers={"User-Agent": "ShopPilot-KeepAlive/1.0"})
+                        logger.info(f"[KeepAlive] Heartbeat {u} -> {r.status_code}")
+                    except Exception as e:
+                        logger.debug(f"[KeepAlive] Ping {u} note: {e}")
+        except Exception as ex:
+            logger.debug(f"[KeepAlive] Loop error: {ex}")
+        await asyncio.sleep(540)  # 9 minutes
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting ShopPilot Backend Server (Price Comparison)...")
+    keep_alive_task = asyncio.create_task(_keep_alive_pinger())
     yield
+    keep_alive_task.cancel()
     logger.info("Shutting down ShopPilot Backend Server...")
 
 app = FastAPI(
@@ -1097,14 +1122,59 @@ async def get_telegram_alert_history():
 
 class AssistantQueryRequest(BaseModel):
     query: str
+    history: Optional[List[Dict[str, str]]] = None
+
+def generate_smart_suggestions(query: str, response: str) -> List[str]:
+    q = query.lower()
+    if "realme" in q:
+        return [
+            "Compare Realme GT 6 vs OnePlus 12R",
+            "Show Realme GT 6 price history",
+            "Is Realme GT 6 good for gaming?",
+        ]
+    elif "iphone" in q or "apple" in q:
+        return [
+            "Compare iPhone 15 vs Samsung S24",
+            "Best deals on iPhone 15 across stores",
+            "Show price trends for iPhone 15",
+        ]
+    elif "boat" in q or "rockerz" in q or "headphone" in q or "earphone" in q:
+        return [
+            "Is boAt Rockerz 550 good for gym?",
+            "Compare boAt Rockerz 550 vs Sony WH-CH520",
+            "Best noise cancelling headphones under ₹3,000",
+        ]
+    elif "laptop" in q:
+        return [
+            "Best laptops for coding under ₹60,000",
+            "Compare MacBook Air M2 vs ASUS Zenbook",
+            "Laptops with 16GB RAM under ₹50,000",
+        ]
+    elif "tv" in q:
+        return [
+            "Difference between OLED and QLED",
+            "Best 55-inch 4K TV under ₹45,000",
+            "Compare Sony Bravia vs Samsung Crystal 4K",
+        ]
+    elif "under" in q or "budget" in q:
+        return [
+            "Phones with 120W fast charging",
+            "Best camera phone in this budget",
+            "Show price drop alerts",
+        ]
+    else:
+        return [
+            "Compare with top competitor",
+            "Show 12-month price history",
+            "Set a price drop alert",
+        ]
 
 @app.post("/api/assistant")
 async def ai_shopping_assistant(payload: AssistantQueryRequest):
     """
     AI Shopping Advisor (Workstream 5 & Defect D5 Resolution):
     Analyzes queries with strict database grounding using Gemini Function Calling tools
-    and offline deterministic tool execution.
-    Protected with prompt-injection defense and anti-scraping policy.
+    and offline deterministic tool execution. Supports multi-turn conversational context.
     """
     from app.agent.assistant import (
         ask_gemini_with_tools,
@@ -1121,7 +1191,7 @@ async def ai_shopping_assistant(payload: AssistantQueryRequest):
     # 1. Try Gemini Function Calling first if API key is present
     gemini_result = None
     if settings.GEMINI_API_KEY:
-        gemini_result = await ask_gemini_with_tools(q)
+        gemini_result = await ask_gemini_with_tools(q, history=payload.history)
 
     if gemini_result:
         response_text, referenced_products = gemini_result
@@ -1131,12 +1201,15 @@ async def ai_shopping_assistant(payload: AssistantQueryRequest):
         response_text, referenced_products = generate_offline_expert_advice(q)
         model_used = "ShopPilot Grounded Catalog Tools (Offline Mode)"
 
+    suggestions = generate_smart_suggestions(q, response_text)
+
     return {
         "query": q,
         "response": response_text,
         "budget": budget,
         "model": model_used,
         "products": referenced_products[:4] if referenced_products else [],
+        "suggestions": suggestions,
     }
 
 
